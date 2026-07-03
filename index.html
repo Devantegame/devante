@@ -237,11 +237,12 @@
   .fan-card.aipick{outline:2px solid var(--ember)}
   /* speed chip */
   #speedChip{
-    position:absolute;right:10px;top:50%;transform:translateY(-50%);
-    font-family:'Cinzel',serif;font-size:10px;letter-spacing:.1em;color:var(--bronze);
-    border:1px solid #3a351f;border-radius:14px;padding:4px 10px;background:#1c1a0e;cursor:pointer;
+    position:absolute;right:8px;top:50%;transform:translateY(-50%);
+    font-family:'Cinzel',serif;font-size:12px;font-weight:700;letter-spacing:.1em;color:var(--brass);
+    border:1.5px solid var(--bronze);border-radius:18px;padding:8px 13px;background:#221f12;cursor:pointer;
+    box-shadow:0 1px 6px rgba(0,0,0,.5);
   }
-  #logBar{position:relative}
+  #logBar{position:relative;min-height:44px;display:flex;align-items:center;justify-content:center}
   /* tutorial */
   #tutPanel{
     display:none;margin:0 12px 8px;border:1.5px solid var(--teal);border-radius:12px;
@@ -300,13 +301,39 @@
   #playFx.drama #playFxCards .card{--card-w:150px;flex-basis:150px;width:150px;height:260px}
   @keyframes dramaShake{0%,100%{transform:translate(0,0)}15%{transform:translate(-7px,3px)}30%{transform:translate(6px,-4px)}
     45%{transform:translate(-5px,-3px)}60%{transform:translate(4px,3px)}75%{transform:translate(-3px,1px)}}
+  /* dealing animation */
+  #dealFx{position:fixed;inset:0;z-index:95;display:none;flex-direction:column;align-items:center;justify-content:center;
+    gap:14px;background:rgba(10,9,4,.88);backdrop-filter:blur(3px)}
+  #dealFx.on{display:flex}
+  #dealFx .dtitle{font-family:'Cinzel',serif;font-size:16px;font-weight:700;letter-spacing:.18em;color:var(--brass-hi);text-transform:uppercase}
+  #dealFx .dcount{font-size:14px;color:var(--parchment-dim);font-style:italic}
+  .flip{width:158px;height:270px;perspective:900px}
+  .flip-inner{position:relative;width:100%;height:100%;transform-style:preserve-3d;transition:transform .5s ease;transform:rotateY(180deg)}
+  .flip-inner.shown{transform:rotateY(0deg)}
+  .flip-face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;border-radius:10px;overflow:hidden}
+  .flip-face .card,.flip-face .card-back{width:100%;height:100%}
+  .flip-back{transform:rotateY(180deg)}
+  #dealFx .dskip{font-size:12px;color:var(--bronze);letter-spacing:.14em;text-transform:uppercase}
+  /* end-of-game staging */
+  .score-row{border:1px solid #3a351f;border-radius:10px;padding:9px 11px;margin-bottom:8px;background:#1c1a0e;animation:cardIn .5s ease both}
+  .score-row .an{font-family:'Cinzel',serif;font-size:14px;margin-bottom:5px}
+  .score-row.tie-pulse{animation:tiePulse .7s ease 3}
+  @keyframes tiePulse{0%,100%{border-color:#3a351f}50%{border-color:var(--brass-hi);box-shadow:0 0 16px rgba(232,207,142,.5)}}
+  .tie-banner{font-family:'Cinzel',serif;font-weight:900;font-size:24px;text-align:center;color:var(--teal);
+    letter-spacing:.16em;margin:10px 0;animation:tiePulse .7s ease 3}
+  .verdict-banner{font-family:'Cinzel',serif;font-weight:900;font-size:44px;text-align:center;letter-spacing:.16em;
+    margin:16px 0 8px;animation:verdictIn .9s cubic-bezier(.2,1.4,.4,1) both}
+  .verdict-banner.win{color:#ffdf9e;text-shadow:0 0 34px rgba(255,200,90,.9),0 0 70px rgba(255,180,70,.5)}
+  .verdict-banner.lose{color:#b3402f;text-shadow:0 0 26px rgba(179,64,47,.7)}
+  @keyframes verdictIn{from{opacity:0;transform:scale(2.4)}to{opacity:1;transform:scale(1)}}
   /* audio chips */
   #musicChip,#sfxChip{
     position:absolute;top:50%;transform:translateY(-50%);
-    font-size:13px;border:1px solid #3a351f;border-radius:14px;padding:3px 9px;background:#1c1a0e;cursor:pointer;
+    font-size:17px;border:1.5px solid var(--bronze);border-radius:18px;padding:6px 13px;background:#221f12;cursor:pointer;
+    box-shadow:0 1px 6px rgba(0,0,0,.5);
   }
-  #musicChip{left:10px} #sfxChip{left:56px}
-  #musicChip.off,#sfxChip.off{opacity:.35}
+  #musicChip{left:8px} #sfxChip{left:66px}
+  #musicChip.off,#sfxChip.off{opacity:.32;border-color:#3a351f}
   .toast{
     position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:120;
     background:#242112;border:1px solid var(--brass);border-radius:24px;padding:9px 20px;
@@ -376,6 +403,12 @@
   </div>
 </div>
 
+<div id="dealFx">
+  <div class="dtitle">Dealing the hands</div>
+  <div class="flip"><div class="flip-inner" id="dealInner"></div></div>
+  <div class="dcount" id="dealCount"></div>
+  <div class="dskip">tap to skip</div>
+</div>
 <div id="playFx"><div id="playFxBox">
   <div class="pfw" id="playFxWho"></div>
   <div class="pft" id="playFxText"></div>
@@ -520,7 +553,7 @@ function startGame(nAI){
   initBacks(); startMusic();
   log("The game begins. Draw a card each turn, then make one play.");
   render();
-  beginTurn();
+  dealAnimation().then(()=>beginTurn());
 }
 
 /* ---------------- logging / ui helpers ---------------- */
@@ -691,14 +724,27 @@ function renderActions(){
     if(!ch.traits.includes(sub)){
       bar.innerHTML=`<div class="hint">${ch.name} can’t use ${TRAIT_LABEL[sub]} cards — the traits must match.</div>`;
     } else if(sub==="spell"){
-      mk(`Cast ${a.abils.length} Spell${a.abils.length>1?"s":""}`,"primary",()=>spellFlow(ch,a.assts[0]||null,a.abils));
+      const units=a.abils.length*multiplier(ch,a.assts[0]||null);
+      mk(`Cast ${a.abils.length} Spell${a.abils.length>1?"s":""} — ${units} steal${units>1?"s":""}`,"primary",()=>spellFlow(ch,a.assts[0]||null,a.abils));
     } else if(sub==="crystal"){
-      mk(`Scry with ${a.abils.length} Ball${a.abils.length>1?"s":""}`,"primary",()=>crystalFlow(ch,a.assts[0]||null,a.abils));
+      const units=a.abils.length*multiplier(ch,a.assts[0]||null);
+      mk(`Scry with ${a.abils.length} Ball${a.abils.length>1?"s":""} — ${units} unit${units>1?"s":""}`,"primary",()=>crystalFlow(ch,a.assts[0]||null,a.abils));
     } else if(sub==="potion"){
       mk("Set Potion Shield","primary",()=>setShieldHuman(ch,a.assts[0]||null,a.abils));
     } else if(sub==="broomstick"){
       bar.innerHTML=`<div class="hint">Broomsticks are defensive — you’ll be offered them automatically when attacked.</div>`;
     }
+  }
+  // helpful nudges before falling back to the generic message
+  if(bar.children.length===0 && a.chars.length===1 && a.abils.length===0 && a.devs.length===0 && a.objs.length===0 && a.assts.length<=1){
+    const ch=a.chars[0];
+    const opts=ch.traits.map(t=>TRAIT_LABEL[t]).join(" or ");
+    bar.innerHTML=`<div class="hint">${a.assts.length?`${ch.name} + ${a.assts[0].name} ready — now add`:`Now add`} ${ch.name}’s matching ability card${ch.traits.length>1?"s":""} (${opts}) to make the play${a.assts.length?" — the assistant will double it":""}.</div>`;
+    return;
+  }
+  if(bar.children.length===0 && a.assts.length===1 && a.chars.length===0 && a.devs.length===0){
+    bar.innerHTML=`<div class="hint">Assistants can’t act alone — pair ${a.assts[0].name} with a Character and their matching ability cards.</div>`;
+    return;
   }
   if(bar.children.length===0)
     bar.innerHTML=`<div class="hint">No valid play with this selection. A play is one card to discard, or a Character + matching Ability cards, or a Devante.</div>`;
@@ -796,7 +842,12 @@ async function resolveSpellOnTargets(att,alloc,cardsPlayed,abilityCount){
   }
   // amended rule: collect-on-play
   const drew=drawCards(att,cardsPlayed);
-  if(drew) log(`<b>${att.name}</b> collects ${drew} card${drew>1?"s":""} for the cards played.`);
+  if(drew){
+    fxDrawFly(att,drew);
+    log(`<b>${att.name}</b> collects ${drew} card${drew>1?"s":""} — one for each card played.`);
+    if(att.human) toast(`+${drew} cards from the Collect pile — one per card you played`);
+    await pause(Math.round(T("beat")*0.8));
+  }
   render();
 }
 
@@ -836,14 +887,39 @@ async function resolveCrystalOnTargets(att,alloc,cardsPlayed,abilityCount){
     rem=await defendPhase(def,att,rem,"crystal",abilityCount);
     if(rem>0){
       if(att.human) reveals.push(def);
-      else { att.knowledge[def===S.players[0]?0:S.players.indexOf(def)] = def.hand.filter(c=>c.kind==="devante").length; 
-             log(`👁 <b>${att.name}</b> peers into <b>${def.name}</b>’s hand.`); }
+      else {
+        att.knowledge[S.players.indexOf(def)] = def.hand.filter(c=>c.kind==="devante").length;
+        log(`👁 <b>${att.name}</b> peers into <b>${def.name}</b>’s hand.`);
+        if(def.human) await showBeingScried(att,def);
+      }
     }
   }
   const drew=drawCards(att,cardsPlayed);
-  if(drew) log(`<b>${att.name}</b> collects ${drew} card${drew>1?"s":""} for the cards played.`);
+  if(drew){
+    fxDrawFly(att,drew);
+    log(`<b>${att.name}</b> collects ${drew} card${drew>1?"s":""} — one for each card played.`);
+    if(att.human) toast(`+${drew} cards from the Collect pile — one per card you played`);
+    await pause(Math.round(T("beat")*0.8));
+  }
   render();
   if(reveals.length) await showRevealedHands(reveals);
+}
+/* A rival's crystal ball succeeds against you — your cards lie open */
+function showBeingScried(att,def){
+  return new Promise(res=>{
+    const box=$("modalBox");
+    box.innerHTML=`<h2>👁 ${att.name} is looking…</h2>
+      <p>The crystal clears — your hand lies open before <b>${att.name}</b>.</p>`;
+    const mh=document.createElement("div"); mh.className="mini-hand";
+    def.hand.forEach(c=>mh.appendChild(cardEl(c)));
+    box.appendChild(mh);
+    const b=document.createElement("button"); b.className="abtn primary"; b.style.width="100%"; b.textContent="Continue";
+    let done=false; const finish=()=>{ if(done)return; done=true; $("modal").classList.remove("on"); res(); };
+    b.onclick=finish;
+    box.appendChild(b);
+    $("modal").classList.add("on");
+    setTimeout(finish, Math.round(T("reveal")*2));
+  });
 }
 function showRevealedHands(defs){
   return new Promise(res=>{
@@ -902,6 +978,7 @@ function humanDefend(def,att,units,attackType,abilityCount){
         const used=brooms.slice(0,v); const chSpent=chars[0];
         removeFromHand(def,[chSpent,...used]); toDiscard([chSpent,...used]);
         const drew=drawCards(def,v);
+        fxDrawFly(def,v);
         playSfx("broom");
         fxSweep(boxOf(def));
         log(`🧹 You counter with ${v} broomstick${v>1?"s":""} and draw ${drew}.`);
@@ -947,6 +1024,7 @@ async function aiDefend(def,att,units,attackType,abilityCount){
     const spent=[chars[0],...brooms.slice(0,v)];
     removeFromHand(def,spent); toDiscard(spent);
     const drew=drawCards(def,v);
+    fxDrawFly(def,v);
     playSfx("broom");
     fxSweep(boxOf(def));
     log(`🧹 <b>${def.name}</b> counters with ${v} broomstick${v>1?"s":""} (drew ${drew}).`);
@@ -960,6 +1038,7 @@ async function aiDefend(def,att,units,attackType,abilityCount){
 async function playDragon(card){
   if(!tutAllows("dragon")) return;
   const me=S.players[0];
+  playSfx("dragon");
   fxHandToDiscard([card]);
   removeFromHand(me,[card]); toDiscard([card]); S.sel.clear();
   S.busy=true; render();
@@ -1191,6 +1270,57 @@ function showFullLog(){
   const lf=$("logFull");lf.scrollTop=lf.scrollHeight;
 }
 
+/* Opening deal: each of your 8 cards flips from back to face, one by one */
+function dealAnimation(){
+  return new Promise(res=>{
+    const me=S.players[0];
+    const fx=$("dealFx"); fx.classList.add("on");
+    let skip=false;
+    fx.onclick=()=>{ skip=true; };
+    const inner=$("dealInner");
+    let i=0;
+    const next=()=>{
+      if(skip || i>=me.hand.length){
+        fx.classList.remove("on"); fx.onclick=null; render();
+        const rivals=S.players.filter(p=>!p.human).map(p=>p.name).join(" and ");
+        log(`${rivals} receive their hands.`);
+        S.players.filter(p=>!p.human).forEach((p,k)=>setTimeout(()=>fxDrawFly(p,3),k*260));
+        setTimeout(res, skip?250:900);
+        return;
+      }
+      const c=me.hand[i];
+      inner.className="flip-inner"; inner.innerHTML="";
+      const front=document.createElement("div"); front.className="flip-face";
+      const fc=cardEl(c); if(c.kind==="devante") fc.classList.add("shimmer");
+      front.appendChild(fc);
+      const back=document.createElement("div"); back.className="flip-face flip-back";
+      back.appendChild(cardBackEl());
+      inner.append(front,back);
+      $("dealCount").textContent=`Card ${i+1} of ${me.hand.length}`;
+      playSfx("deal");
+      requestAnimationFrame(()=>requestAnimationFrame(()=>inner.classList.add("shown")));
+      i++;
+      setTimeout(next, Math.round(T("beat")*0.85));
+    };
+    next();
+  });
+}
+/* card backs fly from the Collect pile to a player's hand — the collect-on-play refund */
+function fxDrawFly(p,n){
+  try{
+    const from=document.querySelector("#collectPile .pile-card").getBoundingClientRect();
+    const to=(p.human?$("hand"):boxOf(p)).getBoundingClientRect();
+    for(let k=0;k<Math.min(n,6);k++){
+      const clone=cardBackEl(); clone.classList.add("fx-card");
+      clone.style.cssText+=`left:${from.left}px;top:${from.top}px;width:${from.width}px;height:${from.height}px`;
+      document.body.appendChild(clone);
+      setTimeout(()=>{ clone.style.left=(to.left+to.width/2-24)+"px"; clone.style.top=(to.top+8)+"px";
+        clone.style.width="48px"; clone.style.height="80px"; clone.style.opacity="0.25"; },40+k*120);
+      setTimeout(()=>clone.remove(),1000+k*120);
+    }
+  }catch(e){}
+}
+
 /* Devante plays are a BIG deal — full drama treatment */
 function showDevanteDrama(who,card,modeText){
   playSfx("devante");
@@ -1305,6 +1435,7 @@ function fanPickInteractive(def,n){
         playSfx("pick");
         flipFanCard(el,card);
         if(card.kind==="devante"){ el.classList.add("shimmer"); playSfx("found"); }
+        if(card.kind==="dragon") playSfx("dragon-found");
         $("fanLeft").textContent=left;
         if(left<=0) setTimeout(()=>{$("modal").classList.remove("on");res(stolen);}, Math.round(T("beat")));
       };
@@ -1334,6 +1465,7 @@ function fanPickWatch(att,def,n){
         playSfx("pick");
         flipFanCard(pick.el,card);
         if(card.kind==="devante"){ pick.el.classList.add("shimmer"); playSfx("found"); }
+        if(card.kind==="dragon") playSfx("dragon-found");
         setTimeout(()=>fxFlyToRival(pick.el,att), Math.round(T("beat")*0.9));
         k++;
         if(k<n) setTimeout(pickOne, Math.round(T("beat")*1.3));
@@ -1364,6 +1496,7 @@ function humanTapDraw(){
       if(drawn.length){
         const gotDev=drawn.some(c=>c.kind==="devante");
         if(gotDev) playSfx("found");
+        if(drawn.some(c=>c.kind==="dragon")) playSfx("dragon-found");
         await showPlay("You",
           gotDev? "✨ You draw a <b>Devante card</b>! Guard it well." :
           (n===2? "empty-handed — you draw <b>two</b> from the Collect pile" : "draw from the Collect pile"),
@@ -1386,7 +1519,7 @@ async function beginTurn(){
     S.busy=true; render();
     const nDraw = p.hand.length===0 ? 2 : 1;
     log(`<b>${p.name}</b> draws ${nDraw===2?"two cards (empty hand)":"a card"}…`); await pause(Math.round(T("beat")*0.8));
-    drawCards(p,nDraw); render();
+    drawCards(p,nDraw); fxDrawFly(p,nDraw); render();
     log(`<b>${p.name}</b> is thinking…`); await pause(T("aiThink"));
     await aiTurn(p); S.busy=false; endTurn();
   }
@@ -1425,6 +1558,7 @@ async function aiTurn(p){
   // 0. dragon: free card advantage, always worth it
   const dragon=hand.find(c=>c.kind==="dragon");
   if(dragon){
+    playSfx("dragon");
     removeFromHand(p,[dragon]); toDiscard([dragon]);
     const drew=drawCards(p,4);
     log(`🐉 <b>${p.name}</b> unleashes the <b>Dragon</b> and draws ${drew} cards!`);
@@ -1571,25 +1705,61 @@ function tutAllows(type){
 }
 
 /* ---------------- game over ---------------- */
-function gameOver(reason){
-  S.busy=true;
+async function gameOver(reason){
+  S.busy=true; render();
+  // A played Devante is a played Devante: shields standing at game end go to the BURN pile, never the tally
+  S.players.forEach(p=>{ if(p.shield&&p.shield.devante){ S.burn.push(p.shield.card); p.shield=null; } });
   const scores=S.players.map(p=>{
     const devs=p.hand.filter(c=>c.kind==="devante");
-    if(p.shield&&p.shield.devante) devs.push(p.shield.card);
     return {p,devs,count:devs.length,best:devs.length?Math.min(...devs.map(d=>d.rank)):99};
   });
   scores.sort((a,b)=> b.count-a.count || a.best-b.best);
   const w=scores[0];
-  const tie = scores.length>1 && scores[1].count===w.count;
+  const tie = scores.length>1 && scores[1].count===w.count && w.count>0;
+  playSfx("scores");
   const box=$("modalBox");
-  box.innerHTML=`<h2>${w.count===0?"No victor…":w.p.name+(w.p.human?" win!":" wins!")}</h2>
-    <p>${reason}${tie?` Tie broken by highest-ranking Devante (${DEVANTES.find(d=>d.rank===w.best)?.name||""}).`:""}</p>
-    ${scores.map(s=>`<div class="alloc-row"><span class="an">${s.p.name}</span><span>${s.count} Devante${s.count!==1?"s":""}${s.devs.length?" — "+s.devs.map(d=>d.name).join(", "):""}</span></div>`).join("")}
-    <div class="alloc-row" style="border-color:#4a2318"><span class="an" style="color:#d99a83">Burned</span><span>${(b=>b.length? b.map(d=>d.name).join(", ") : "none")(S.burn.filter(c=>c.kind==="devante"))}</span></div>`;
+  box.innerHTML=`<h2>The Collect pile is empty…</h2><p>${reason} Counting the spell books:</p>
+    <div id="scoreRows"></div><div id="verdict"></div>`;
+  $("modal").classList.add("on");
+  const rows=$("scoreRows");
+  for(const sc of scores){
+    const row=document.createElement("div"); row.className="score-row"; row.dataset.name=sc.p.name;
+    row.innerHTML=`<div class="an">${sc.p.name} — <b>${sc.count}</b> Devante${sc.count!==1?"s":""}</div>`;
+    const mh=document.createElement("div"); mh.className="mini-hand";
+    if(sc.devs.length) sc.devs.sort((a,b)=>a.rank-b.rank).forEach(d=>{const el=cardEl(d); el.classList.add("shimmer"); el.style.cursor="default"; mh.appendChild(el);});
+    else mh.innerHTML=`<span style="color:var(--parchment-dim);font-style:italic;font-size:14px">no Devante cards</span>`;
+    row.appendChild(mh); rows.appendChild(row);
+    await pause(Math.round(T("reveal")*0.75));
+  }
+  const burned=S.burn.filter(c=>c.kind==="devante");
+  rows.insertAdjacentHTML("beforeend",
+    `<div class="alloc-row" style="border-color:#4a2318"><span class="an" style="color:#d99a83">🔥 Burned</span><span>${burned.length?burned.map(d=>d.name).join(", "):"none"}</span></div>`);
+  await pause(T("beat"));
+  const vd=$("verdict");
+  if(tie){
+    // tie drama: the tied rows pulse, then the highest-ranked book settles it
+    rows.querySelectorAll(".score-row").forEach(r=>{
+      const sc=scores.find(x=>x.p.name===r.dataset.name);
+      if(sc && sc.count===w.count) r.classList.add("tie-pulse");
+    });
+    vd.innerHTML=`<div class="tie-banner">A TIE — ${w.count} EACH!</div>`;
+    await pause(2200);
+    const breaker=w.devs.sort((a,b)=>a.rank-b.rank)[0];
+    vd.innerHTML+=`<p style="text-align:center"><b>${breaker.name}</b>, ranked ${breaker.rank}${breaker.rank===1?"st":breaker.rank===2?"nd":breaker.rank===3?"rd":"th"}, breaks the tie for <b>${w.p.name}</b>!</p>`;
+    const big=cardEl(breaker); big.classList.add("shimmer");
+    big.style.cssText+="width:130px;height:226px;margin:6px auto;flex:none;cursor:default;display:block";
+    vd.appendChild(big);
+    await pause(Math.round(T("reveal")));
+  }
+  const youWin = w.p.human && w.count>0;
+  playSfx(youWin?"victory":"defeat");
+  const label = w.count===0 ? "NO VICTOR" : (youWin ? "VICTORY" : "DEFEAT");
+  vd.insertAdjacentHTML("beforeend",
+    `<div class="verdict-banner ${youWin?"win":"lose"}">${label}</div>
+     <p style="text-align:center">${w.count===0?"No spell books were held when the pile ran dry.":(youWin?"The spell books are yours!":`<b>${w.p.name}</b> claims the spell books.`)}</p>`);
   const b=document.createElement("button");b.className="abtn primary";b.style.cssText="width:100%;margin-top:10px";b.textContent="Play again";
   b.onclick=()=>location.reload();
-  box.appendChild(b);
-  $("modal").classList.add("on");
+  vd.appendChild(b);
 }
 </script>
 </body>
