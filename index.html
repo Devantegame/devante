@@ -1,0 +1,1463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#16150e">
+<title>Devante — The Spellbook Card Game</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=EB+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#16150e;          /* blackened olive — the card frames */
+    --ink-2:#211f14;
+    --bronze:#8a763f;
+    --brass:#c9a75f;
+    --brass-hi:#e8cf8e;
+    --parchment:#e9dcbf;
+    --parchment-dim:#b8ad92;
+    --teal:#4f8f96;         /* caeruleum */
+    --ember:#b3402f;        /* attack / burn */
+    --shield:#7d9b6a;
+    --radius:12px;
+    --card-w:88px;
+    --card-h:154px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    font-family:'EB Garamond',Georgia,serif;
+    background:
+      radial-gradient(ellipse 120% 80% at 50% -10%, #2a2818 0%, transparent 60%),
+      radial-gradient(ellipse 100% 60% at 50% 110%, #100f09 0%, transparent 60%),
+      var(--ink);
+    color:var(--parchment);
+    display:flex;flex-direction:column;
+    height:100dvh;overflow:hidden;
+    user-select:none;-webkit-user-select:none;
+  }
+  h1,h2,h3,.display{font-family:'Cinzel',serif;letter-spacing:.06em}
+
+  /* ============ START SCREEN ============ */
+  #startScreen{
+    position:fixed;inset:0;z-index:100;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:22px;padding:24px;text-align:center;
+    background:
+      radial-gradient(ellipse 90% 60% at 50% 30%, #2b2917 0%, transparent 65%),
+      var(--ink);
+  }
+  #startScreen h1{
+    font-size:clamp(44px,12vw,72px);font-weight:900;color:var(--brass-hi);
+    text-shadow:0 0 30px rgba(201,167,95,.35), 0 2px 0 #4d3f1c;
+    line-height:1;
+  }
+  #startScreen .sub{font-family:'Cinzel',serif;font-size:13px;letter-spacing:.35em;color:var(--bronze);text-transform:uppercase}
+  .rule-line{width:180px;height:1px;background:linear-gradient(90deg,transparent,var(--brass),transparent)}
+  #startScreen p{max-width:420px;color:var(--parchment-dim);font-size:17px;line-height:1.5}
+  .opp-pick{display:flex;gap:12px}
+  .opp-btn{
+    width:84px;height:84px;border-radius:50%;border:1.5px solid var(--bronze);
+    background:radial-gradient(circle at 35% 30%, #2e2b19, #191811);
+    color:var(--parchment);font-family:'Cinzel',serif;font-size:15px;font-weight:700;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+    cursor:pointer;transition:transform .15s, box-shadow .15s;
+  }
+  .opp-btn small{font-size:10px;letter-spacing:.12em;color:var(--bronze);font-weight:500}
+  .opp-btn:active{transform:scale(.94)}
+  .opp-btn:hover{box-shadow:0 0 18px rgba(201,167,95,.35);border-color:var(--brass)}
+
+  /* ============ TABLE LAYOUT ============ */
+  #game{display:none;flex-direction:column;height:100%;}
+  #game.on{display:flex}
+
+  #oppRow{display:flex;justify-content:center;gap:10px;padding:max(10px,env(safe-area-inset-top)) 10px 6px}
+  .opp{
+    flex:1;max-width:150px;border:1px solid #3a351f;border-radius:var(--radius);
+    background:linear-gradient(180deg,#221f12,#1a180f);
+    padding:8px 8px 7px;text-align:center;position:relative;transition:box-shadow .3s,border-color .3s;
+  }
+  .opp.active{border-color:var(--brass);box-shadow:0 0 16px rgba(201,167,95,.25)}
+  .opp .oname{font-family:'Cinzel',serif;font-size:12px;font-weight:700;color:var(--brass);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .opp .ocount{font-size:22px;font-weight:600;line-height:1.1}
+  .opp .olabel{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--parchment-dim)}
+  .shield-pip{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--shield);margin:3px 2px 0;box-shadow:0 0 6px rgba(125,155,106,.8)}
+  .shield-pip.dev{background:var(--teal);box-shadow:0 0 6px rgba(79,143,150,.9)}
+  .targetable{outline:2px solid var(--ember);outline-offset:2px;cursor:pointer;animation:pulse 1.2s infinite}
+  @keyframes pulse{0%,100%{outline-color:rgba(179,64,47,.9)}50%{outline-color:rgba(179,64,47,.3)}}
+
+  #tableMid{flex:1;display:flex;align-items:center;justify-content:center;gap:18px;min-height:0;padding:4px 10px}
+  .pile{display:flex;flex-direction:column;align-items:center;gap:5px}
+  .pile .plabel{font-family:'Cinzel',serif;font-size:10px;letter-spacing:.22em;color:var(--bronze);text-transform:uppercase}
+  .pile-card{
+    width:74px;height:118px;border-radius:9px;position:relative;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .card-back{
+    background:
+      radial-gradient(circle at 50% 40%, #33301b 0%, #1d1b10 70%),
+      var(--ink-2);
+    border:2px solid var(--bronze);border-radius:9px;width:100%;height:100%;
+    display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;
+  }
+  .card-back::before{content:"";position:absolute;inset:5px;border:1px solid rgba(201,167,95,.4);border-radius:6px}
+  .card-back span{font-family:'Cinzel',serif;font-weight:900;font-size:9px;letter-spacing:.18em;color:var(--brass);transform:rotate(-90deg)}
+  .pile .pcount{font-size:14px;color:var(--parchment-dim)}
+  #discardTop{width:74px;height:118px;border-radius:9px;overflow:hidden;border:1px solid #3a351f;background:#101008}
+  #discardTop img{width:100%;height:100%;object-fit:cover}
+  #burnPile .pile-card{
+    border:1.5px solid #4a2318;border-radius:9px;
+    background:radial-gradient(circle at 50% 85%, rgba(179,64,47,.5) 0%, rgba(30,12,8,.9) 60%),#150b07;
+    box-shadow:0 0 18px rgba(179,64,47,.28) inset, 0 0 14px rgba(179,64,47,.18);
+    flex-direction:column;gap:2px;display:flex;
+  }
+  #burnList{font-size:10px;line-height:1.35;color:#d99a83;text-align:center;padding:4px;max-height:100%;overflow:hidden}
+
+  #logBar{
+    text-align:center;padding:4px 14px 6px;font-size:15px;font-style:italic;color:var(--parchment-dim);
+    min-height:26px;cursor:pointer;
+  }
+  #logBar b{color:var(--parchment);font-style:normal}
+
+  /* ============ PLAYER AREA ============ */
+  #you{
+    border-top:1px solid #3a351f;background:linear-gradient(180deg,#1c1a0f,#151309);
+    padding:6px 0 max(8px, env(safe-area-inset-bottom));
+  }
+  #youShield{display:flex;justify-content:center;gap:6px;padding:0 12px 4px;font-size:12px;color:var(--shield);min-height:16px}
+  #hand{
+    display:flex;gap:8px;overflow-x:auto;padding:6px 12px 10px;scrollbar-width:none;
+  }
+  #hand::-webkit-scrollbar{display:none}
+  .card{
+    flex:0 0 var(--card-w);width:var(--card-w);height:var(--card-h);
+    border-radius:8px;overflow:hidden;position:relative;border:1.5px solid #3a351f;
+    background:#101008;transition:transform .15s, box-shadow .15s, border-color .15s;
+    cursor:pointer;
+  }
+  .card img{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}
+  .card .ph{
+    position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:6px;padding:8px;text-align:center;background:linear-gradient(180deg,#26230f,#171509);
+  }
+  .card .ph .phn{font-family:'Cinzel',serif;font-size:11px;font-weight:700;color:var(--brass);line-height:1.25}
+  .card .ph .pht{font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--parchment-dim)}
+  .card.sel{transform:translateY(-14px);border-color:var(--brass-hi);box-shadow:0 6px 18px rgba(0,0,0,.6),0 0 12px rgba(232,207,142,.35)}
+  .card .tag{
+    position:absolute;bottom:0;left:0;right:0;background:rgba(12,11,6,.82);
+    font-family:'Cinzel',serif;font-size:8.5px;font-weight:700;letter-spacing:.05em;
+    color:var(--parchment);text-align:center;padding:3px 2px;line-height:1.2;
+  }
+  .card .tag em{display:block;font-style:normal;font-size:7.5px;color:var(--bronze);letter-spacing:.12em}
+
+  #actionBar{
+    display:flex;gap:8px;justify-content:center;flex-wrap:wrap;padding:2px 12px 4px;min-height:44px;align-items:center;
+  }
+  .abtn{
+    font-family:'Cinzel',serif;font-weight:700;font-size:13px;letter-spacing:.06em;
+    padding:10px 18px;border-radius:24px;border:1.5px solid var(--bronze);
+    background:linear-gradient(180deg,#2c2916,#1c1a0e);color:var(--parchment);cursor:pointer;
+    transition:transform .12s;
+  }
+  .abtn:active{transform:scale(.95)}
+  .abtn.primary{border-color:var(--brass-hi);color:var(--brass-hi);box-shadow:0 0 12px rgba(201,167,95,.25)}
+  .abtn.danger{border-color:var(--ember);color:#e0917f}
+  .abtn:disabled{opacity:.35;pointer-events:none}
+  .hint{font-size:13px;font-style:italic;color:var(--parchment-dim);text-align:center;width:100%}
+
+  /* ============ MODALS ============ */
+  #modal{
+    position:fixed;inset:0;z-index:90;background:rgba(10,9,4,.82);backdrop-filter:blur(3px);
+    display:none;align-items:center;justify-content:center;padding:18px;
+  }
+  #modal.on{display:flex}
+  #modalBox{
+    width:100%;max-width:430px;max-height:86dvh;overflow-y:auto;
+    background:linear-gradient(180deg,#242112,#181509);
+    border:1.5px solid var(--brass);border-radius:16px;padding:20px 18px;
+    box-shadow:0 0 40px rgba(0,0,0,.8);
+  }
+  #modalBox h2{font-size:19px;color:var(--brass-hi);margin-bottom:8px;text-align:center}
+  #modalBox p{color:var(--parchment-dim);font-size:15.5px;line-height:1.45;margin-bottom:12px;text-align:center}
+  .alloc-row{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    border:1px solid #3a351f;border-radius:10px;padding:10px 12px;margin-bottom:8px;background:#1c1a0e;
+  }
+  .alloc-row .an{font-family:'Cinzel',serif;font-size:13px;font-weight:700}
+  .stepper{display:flex;align-items:center;gap:12px}
+  .stepper button{
+    width:34px;height:34px;border-radius:50%;border:1.5px solid var(--bronze);background:#26230f;
+    color:var(--brass-hi);font-size:19px;cursor:pointer;line-height:1;
+  }
+  .stepper span{font-size:19px;min-width:20px;text-align:center}
+  .mrow{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:12px}
+  .mini-hand{display:flex;gap:6px;overflow-x:auto;padding:6px 0;margin-bottom:8px}
+  .mini-hand .card{--card-w:66px;flex-basis:66px;width:66px;height:114px}
+  .revealed-hand{margin-bottom:12px}
+  .revealed-hand h3{font-size:14px;color:var(--brass);margin-bottom:4px}
+  #logFull{font-size:14px;line-height:1.55;color:var(--parchment-dim)}
+  #logFull div{padding:3px 0;border-bottom:1px dotted #33301b}
+  .devchoice{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+  .devchoice .abtn{width:100%}
+  /* play banner: shows which cards a rival just played */
+  #playFx{
+    position:fixed;inset:0;z-index:80;display:none;align-items:center;justify-content:center;
+    background:rgba(10,9,4,.72);backdrop-filter:blur(2px);padding:18px;
+  }
+  #playFx.on{display:flex}
+  #playFxBox{
+    text-align:center;max-width:430px;width:100%;
+    background:linear-gradient(180deg,#242112,#181509);
+    border:1.5px solid var(--brass);border-radius:16px;padding:18px 14px;
+    box-shadow:0 0 40px rgba(0,0,0,.8);
+  }
+  #playFxBox .pfw{font-family:'Cinzel',serif;font-size:17px;font-weight:700;color:var(--brass-hi);margin-bottom:4px}
+  #playFxBox .pft{font-size:15px;color:var(--parchment-dim);font-style:italic;margin-bottom:10px}
+  #playFxCards{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+  #playFxCards .card{--card-w:78px;flex-basis:78px;width:78px;height:136px;cursor:default;animation:cardIn .4s ease both}
+  #playFxCards .card:nth-child(2){animation-delay:.12s}
+  #playFxCards .card:nth-child(3){animation-delay:.24s}
+  #playFxCards .card:nth-child(4){animation-delay:.36s}
+  #playFxCards .card:nth-child(5){animation-delay:.48s}
+  @keyframes cardIn{from{opacity:0;transform:translateY(16px) scale(.92)}to{opacity:1;transform:none}}
+  #playFxBox .pfskip{font-size:12px;color:var(--bronze);margin-top:10px;letter-spacing:.12em;text-transform:uppercase}
+  .card-back img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:7px}
+  /* fan picker for stealing cards */
+  #fanRow{display:flex;justify-content:center;padding:18px 0 8px;min-height:150px}
+  .fan-card{
+    width:80px;height:138px;border-radius:8px;margin-left:-34px;position:relative;
+    border:1.5px solid var(--bronze);overflow:hidden;background:#101008;
+    transition:transform .22s, box-shadow .22s;cursor:pointer;flex:0 0 auto;
+  }
+  .fan-card:first-child{margin-left:0}
+  .fan-card:not(.flipped):hover{transform:translateY(-12px);box-shadow:0 8px 20px rgba(0,0,0,.7);z-index:5}
+  .fan-card.flipped{transform:translateY(-18px) scale(1.06);z-index:6;border-color:var(--brass-hi);
+    box-shadow:0 0 18px rgba(232,207,142,.4);cursor:default}
+  .fan-card.aipick{outline:2px solid var(--ember)}
+  /* speed chip */
+  #speedChip{
+    position:absolute;right:10px;top:50%;transform:translateY(-50%);
+    font-family:'Cinzel',serif;font-size:10px;letter-spacing:.1em;color:var(--bronze);
+    border:1px solid #3a351f;border-radius:14px;padding:4px 10px;background:#1c1a0e;cursor:pointer;
+  }
+  #logBar{position:relative}
+  /* tutorial */
+  #tutPanel{
+    display:none;margin:0 12px 8px;border:1.5px solid var(--teal);border-radius:12px;
+    background:linear-gradient(180deg,#1b2422,#141a18);padding:12px 14px;
+  }
+  #tutPanel.on{display:block}
+  #tutPanel .tt{font-family:'Cinzel',serif;font-size:12px;font-weight:700;letter-spacing:.16em;color:var(--teal);text-transform:uppercase;margin-bottom:4px}
+  #tutPanel .tb{font-size:15.5px;line-height:1.45;color:var(--parchment)}
+  #tutPanel .abtn{margin-top:10px}
+  /* draw arrow on collect pile */
+  #collectPile{position:relative}
+  #collectPile.your-draw .pile-card{cursor:pointer;animation:collectGlow 1.4s infinite}
+  @keyframes collectGlow{0%,100%{box-shadow:0 0 8px rgba(232,207,142,.25)}50%{box-shadow:0 0 26px rgba(232,207,142,.75)}}
+  #drawArrow{
+    position:absolute;top:-46px;left:50%;transform:translateX(-50%);display:none;
+    font-size:30px;color:var(--brass-hi);text-shadow:0 0 12px rgba(232,207,142,.8);
+    animation:arrowBounce .9s infinite;pointer-events:none;z-index:5;
+  }
+  #drawArrow small{display:block;font-family:'Cinzel',serif;font-size:10px;letter-spacing:.2em;text-align:center}
+  #collectPile.your-draw #drawArrow{display:block}
+  @keyframes arrowBounce{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(9px)}}
+  /* devante shimmer */
+  .card.shimmer::after{
+    content:"";position:absolute;inset:0;border-radius:8px;pointer-events:none;
+    background:linear-gradient(115deg,transparent 30%,rgba(255,244,214,.55) 48%,rgba(255,255,255,.85) 50%,rgba(255,244,214,.55) 52%,transparent 70%);
+    background-size:260% 100%;animation:shimmerSweep 1.6s ease-in-out infinite;
+  }
+  @keyframes shimmerSweep{0%{background-position:120% 0}100%{background-position:-140% 0}}
+  /* flying fx */
+  .fx-card{position:fixed;z-index:150;pointer-events:none;transition:all .65s cubic-bezier(.5,.05,.45,1);border-radius:8px;overflow:hidden}
+  .fx-bolt{position:fixed;z-index:150;width:20px;height:20px;border-radius:50%;pointer-events:none;
+    transition:all .55s cubic-bezier(.4,0,.8,1);filter:blur(1px)}
+  .fx-sweep{position:fixed;z-index:150;font-size:42px;pointer-events:none;transition:all .6s ease;text-shadow:0 0 14px rgba(232,207,142,.8)}
+  @keyframes burnFlash{0%{box-shadow:0 0 14px rgba(179,64,47,.2) inset,0 0 10px rgba(179,64,47,.2)}
+    40%{box-shadow:0 0 44px rgba(255,120,60,.95) inset,0 0 40px rgba(255,110,50,.8)}
+    100%{box-shadow:0 0 18px rgba(179,64,47,.28) inset,0 0 14px rgba(179,64,47,.18)}}
+  #burnPile .pile-card.flash{animation:burnFlash 1s ease}
+  /* inspector */
+  #inspectImg{width:100%;max-height:62dvh;object-fit:contain;border-radius:12px;display:block;margin:0 auto}
+  .toast{
+    position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:120;
+    background:#242112;border:1px solid var(--brass);border-radius:24px;padding:9px 20px;
+    font-size:14px;box-shadow:0 4px 20px rgba(0,0,0,.6);opacity:0;transition:opacity .3s;pointer-events:none;
+    max-width:90vw;text-align:center;
+  }
+  .toast.on{opacity:1}
+  @media (min-width:700px){
+    :root{--card-w:104px;--card-h:182px}
+    #hand{justify-content:center}
+  }
+  @media (prefers-reduced-motion: reduce){
+    *{animation:none!important;transition:none!important}
+  }
+</style>
+</head>
+<body>
+
+<!-- ================= START ================= -->
+<div id="startScreen">
+  <div class="sub">The Spellbook Card Game</div>
+  <h1>DEVANTE</h1>
+  <div class="rule-line"></div>
+  <p>Collect the eight Devante cards. Strike with spells, spy with crystal balls, shield with potions — and guard your collection from thieving rivals.</p>
+  <div class="sub" style="letter-spacing:.2em">You face two rivals</div>
+  <div class="opp-pick" style="flex-direction:column;align-items:center;gap:10px">
+    <button class="opp-btn" style="width:auto;height:auto;border-radius:32px;padding:16px 34px" onclick="startGame(2)">BEGIN<small>THE GAME</small></button>
+    <button class="opp-btn" style="width:auto;height:auto;border-radius:32px;padding:12px 28px;border-color:var(--teal)" onclick="startTutorial()">TUTORIAL<small>LEARN TO PLAY</small></button>
+  </div>
+  <div class="sub" style="letter-spacing:.2em;font-size:11px">Game speed</div>
+  <div class="opp-pick" id="speedPick">
+    <button class="opp-btn" style="width:64px;height:64px;font-size:11px" onclick="setSpeed(0,this)">Slow</button>
+    <button class="opp-btn" style="width:64px;height:64px;font-size:11px" onclick="setSpeed(1,this)">Normal</button>
+    <button class="opp-btn" style="width:64px;height:64px;font-size:11px" onclick="setSpeed(2,this)">Fast</button>
+  </div>
+  <p style="font-size:13px;opacity:.7">v0.4 playtest build · Quick Variation rules · 3 players</p>
+</div>
+
+<!-- ================= GAME ================= -->
+<div id="game">
+  <div id="oppRow"></div>
+  <div id="tableMid">
+    <div class="pile" id="collectPile">
+      <div id="drawArrow">▼<small>DRAW</small></div>
+      <div class="pile-card"><div class="card-back"><span>DEVANTE</span></div></div>
+      <div class="plabel">Collect</div><div class="pcount" id="collectCount">0</div>
+    </div>
+    <div class="pile">
+      <div id="discardTop"></div>
+      <div class="plabel">Discard</div><div class="pcount" id="discardCount">0</div>
+    </div>
+    <div class="pile" id="burnPile">
+      <div class="pile-card"><div id="burnList"></div></div>
+      <div class="plabel">Burn</div><div class="pcount" id="burnCount">0</div>
+    </div>
+  </div>
+  <div id="logBar"><span id="logText" onclick="showFullLog()">Welcome to Devante.</span><span id="speedChip" onclick="cycleSpeed()">⏱ SLOW</span></div>
+  <div id="you">
+    <div id="tutPanel"><div class="tt">Tutorial</div><div class="tb" id="tutText"></div><div id="tutBtnHolder"></div></div>
+    <div id="youShield"></div>
+    <div id="actionBar"></div>
+    <div id="hand"></div>
+  </div>
+</div>
+
+<div id="playFx"><div id="playFxBox">
+  <div class="pfw" id="playFxWho"></div>
+  <div class="pft" id="playFxText"></div>
+  <div id="playFxCards"></div>
+  <div class="pfskip">tap to continue</div>
+</div></div>
+<div id="modal"><div id="modalBox"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* =====================================================================
+   DEVANTE — playtest build
+   Rules implemented: amended rulebook v2 (Quick Variation only,
+   collect-on-play, multi-target spells & crystal balls,
+   10 of each object, no character-discard draws).
+   =====================================================================
+   >>> Roster confirmed by Tommy (2 Jul 2026). Drop remaining card art
+   into /cards using the img filenames below. Only ability-spell.jpg
+   is still awaiting artwork.
+   ===================================================================== */
+
+const CHARACTERS = [
+  {name:"Betty & Barbra", img:"char-betty-barbra.jpg", traits:["spell","broomstick"], advanced:false, assistant:false},
+  {name:"Hereto",         img:"char-hereto.jpg",       traits:["spell","broomstick"], advanced:false, assistant:false},
+  {name:"Mason",          img:"char-mason.jpg",        traits:["spell","broomstick"], advanced:false, assistant:false},
+  {name:"Maverick",       img:"char-maverick.jpg",     traits:["spell","broomstick"], advanced:true,  assistant:false},
+  {name:"Fairy Queen",    img:"char-fairy-queen.jpg",  traits:["spell"],              advanced:true,  assistant:false},
+  {name:"Diamone",        img:"char-diamone.jpg",      traits:["crystal"],            advanced:false, assistant:false},
+  {name:"Odorf",          img:"char-odorf.jpg",        traits:["potion"],             advanced:false, assistant:false},
+  {name:"Mortous",        img:"char-mortous.jpg",      traits:["spell","broomstick"], advanced:false, assistant:false},
+  {name:"Ralph",          img:"char-ralph.jpg",        traits:["spell"],              advanced:false, assistant:false},
+  {name:"Sallandra",      img:"char-sallandra.jpg",    traits:["spell","broomstick"], advanced:false, assistant:false},
+  {name:"Naldy",          img:"char-naldy.jpg",        traits:["spell","broomstick"], advanced:false, assistant:false},
+  {name:"Getergrin",      img:"char-getergrin.jpg",    traits:[], advanced:false, assistant:true},
+  {name:"Smookers",       img:"char-smookers.jpg",     traits:[], advanced:false, assistant:true},
+  {name:"Rupert",         img:"char-rupert.jpg",       traits:[], advanced:false, assistant:true},
+];
+
+/* Pacing — Slow / Normal / Fast, tap the ⏱ chip in-game to change any time */
+const TEMPO = { beat: 1300, reveal: 2600, aiThink: 1500 };
+const SPEEDS = [ {name:"SLOW",mult:1.7}, {name:"NORMAL",mult:1}, {name:"FAST",mult:0.55} ];
+let speedIdx = 0; // default Slow — Tommy's request
+function T(key){ return Math.round(TEMPO[key]*SPEEDS[speedIdx].mult); }
+function setSpeed(i,btn){ speedIdx=i;
+  document.querySelectorAll("#speedPick .opp-btn").forEach(b=>b.style.boxShadow="");
+  if(btn) btn.style.boxShadow="0 0 18px rgba(201,167,95,.6)";
+  const chip=document.getElementById("speedChip"); if(chip) chip.textContent="⏱ "+SPEEDS[i].name;
+}
+function cycleSpeed(){ setSpeed((speedIdx+1)%SPEEDS.length); toast("Speed: "+SPEEDS[speedIdx].name); }
+
+const DEVANTES = [
+  {rank:1,name:"Corium",    img:"devante-1-corium.jpg"},
+  {rank:2,name:"Aurum",     img:"devante-2-aurum.jpg"},
+  {rank:3,name:"Lignum",    img:"devante-3-lignum.jpg"},
+  {rank:4,name:"Metallum",  img:"devante-4-metallum.jpg"},
+  {rank:5,name:"Rubrum",    img:"devante-5-rubrum.jpg"},
+  {rank:6,name:"Caeruleum", img:"devante-6-caeruleum.jpg"},
+  {rank:7,name:"Aurantiaco",img:"devante-7-aurantiaco.jpg"},
+  {rank:8,name:"Rosea",     img:"devante-8-rosea.jpg"},
+];
+
+const ABILITY_ART = {
+  spell:"ability-spell.jpg",           // not uploaded yet — placeholder shows
+  broomstick:"ability-broomstick.jpg",
+  crystal:"ability-crystal-ball.jpg",
+  potion:"ability-potion.jpg",         // not uploaded yet — placeholder shows
+};
+const OBJECTS = [
+  {name:"Forgotten Goblet",  img:"object-forgotten-goblet.jpg"},
+  {name:"Blank Parchment",   img:"object-blank-parchment.jpg"}, // not uploaded yet
+  {name:"Dusty Candelabra",  img:"object-dusty-candelabra.jpg"},
+];
+const ABILITY_COUNTS = {spell:20, crystal:8, broomstick:8, potion:8};
+const DRAGON_COUNT = 1; // Tommy: adjust if the physical deck has more
+const OBJECT_COUNT_EACH = 10;   // amended: 10 each, not 13
+const HAND_SIZE = 8;
+const AI_NAMES = ["Marie","Adam","The Warlock"];
+const TRAIT_LABEL = {spell:"Spell", crystal:"Crystal Ball", broomstick:"Broomstick", potion:"Potion"};
+
+/* ---------------- state ---------------- */
+let S = null;
+let uid = 0;
+const $ = id => document.getElementById(id);
+
+function buildDeck(){
+  const deck=[];
+  CHARACTERS.forEach(c=>deck.push({id:++uid,kind:"character",...c}));
+  DEVANTES.forEach(d=>deck.push({id:++uid,kind:"devante",...d}));
+  for(const [sub,n] of Object.entries(ABILITY_COUNTS))
+    for(let i=0;i<n;i++) deck.push({id:++uid,kind:"ability",sub,name:TRAIT_LABEL[sub],img:ABILITY_ART[sub]});
+  OBJECTS.forEach(o=>{for(let i=0;i<OBJECT_COUNT_EACH;i++)deck.push({id:++uid,kind:"object",...o});});
+  for(let i=0;i<DRAGON_COUNT;i++)deck.push({id:++uid,kind:"dragon",name:"Dragon",img:"special-dragon.jpg"});
+  return deck;
+}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+
+function startGame(nAI){
+  const deck = shuffle(buildDeck());
+  S = {
+    players:[{name:"You", human:true, hand:[], shield:null, devUsedTurn:false}],
+    collect:deck, discard:[], burn:[],
+    turn:0, log:[], busy:false, sel:new Set(),
+  };
+  for(let i=0;i<nAI;i++) S.players.push({name:AI_NAMES[i], human:false, hand:[], shield:null, devUsedTurn:false, knowledge:{}});
+  // deal
+  for(let r=0;r<HAND_SIZE;r++) S.players.forEach(p=>p.hand.push(S.collect.pop()));
+  // flip 3 to discard — Devante flipped at setup burn instead
+  let flipped=0;
+  while(flipped<3 && S.collect.length){
+    const c=S.collect.pop();
+    if(c.kind==="devante"){ S.collect.splice(Math.floor(Math.random()*S.collect.length),0,c); }
+    else {S.discard.push(c); flipped++;}
+  }
+  $("startScreen").style.display="none";
+  $("game").classList.add("on");
+  initBacks();
+  log("The game begins. Draw a card each turn, then make one play.");
+  render();
+  beginTurn();
+}
+
+/* ---------------- logging / ui helpers ---------------- */
+function log(msg){S.log.push(msg); $("logText").innerHTML=msg; }
+function cardBackEl(cls){
+  const d=document.createElement("div"); d.className=cls||"card-back";
+  const img=document.createElement("img"); img.alt="card back";
+  smartSrc(img,"card-back.jpg",()=>{img.remove(); if(!d.querySelector("span")){const s=document.createElement("span");s.textContent="DEVANTE";d.appendChild(s);}});
+  d.appendChild(img); return d;
+}
+function initBacks(){
+  const holder=document.querySelector("#collectPile .pile-card");
+  holder.innerHTML=""; holder.appendChild(cardBackEl());
+}
+function toast(msg,ms=2600){const t=$("toast");t.innerHTML=msg;t.classList.add("on");clearTimeout(t._x);t._x=setTimeout(()=>t.classList.remove("on"),ms);}
+/* Show which cards were just played, wait so the human can read it. Tap to skip. */
+function showPlay(who,text,cards,ms){
+  return new Promise(res=>{
+    $("playFxWho").textContent=who;
+    $("playFxText").innerHTML=text;
+    const holder=$("playFxCards"); holder.innerHTML="";
+    (cards||[]).slice(0,5).forEach(c=>{const el=cardEl(c); if(c.kind==="devante")el.classList.add("shimmer"); holder.appendChild(el);});
+    const fx=$("playFx"); fx.classList.add("on");
+    let done=false;
+    const finish=()=>{ if(done)return; done=true; fx.classList.remove("on"); fx.onclick=null; res(); };
+    fx.onclick=finish;
+    setTimeout(finish, ms||T("reveal"));
+  });
+}
+/* Tries .jpg, .JPG, .jpeg, .JPEG, .png, .PNG so files work whatever the extension case */
+function smartSrc(img, filename, onFail){
+  const base=filename.replace(/\.(jpg|jpeg|png)$/i,"");
+  const variants=[filename, base+".JPG", base+".jpeg", base+".JPEG", base+".png", base+".PNG"]
+    .filter((v,i,a)=>a.indexOf(v)===i);
+  // look inside the cards folder first, then at the top level next to index.html
+  const tries=[...variants.map(v=>"cards/"+v), ...variants];
+  let k=0;
+  img.onerror=()=>{ k++; if(k<tries.length){ img.src=tries[k]; } else if(onFail) onFail(); };
+  img.src=tries[0];
+}
+function cardEl(c, mini=false){
+  const d=document.createElement("div");
+  d.className="card"; d.dataset.id=c.id;
+  const img=document.createElement("img");
+  img.alt=c.name;
+  smartSrc(img, c.img, ()=>{img.remove(); const ph=document.createElement("div"); ph.className="ph";
+    ph.innerHTML=`<div class="pht">${c.kind}</div><div class="phn">${c.name}</div><div class="pht" style="opacity:.6">art coming soon</div>`;
+    d.prepend(ph);});
+  d.appendChild(img);
+  if(c.kind==="devante") d.classList.add("has-shine");
+  const tag=document.createElement("div"); tag.className="tag";
+  let sub="";
+  if(c.kind==="character") sub = c.assistant?"Assistant ×2":(c.advanced?"Advanced · ":"")+c.traits.map(t=>TRAIT_LABEL[t]).join(" · ");
+  if(c.kind==="devante") sub = `Devante · Rank ${c.rank}`;
+  if(c.kind==="ability") sub = "Ability";
+  if(c.kind==="object") sub = "Object";
+  if(c.kind==="dragon") sub = "Draw 4 when played";
+  tag.innerHTML=`${c.name}<em>${sub}</em>`;
+  d.appendChild(tag);
+  return d;
+}
+
+function render(){
+  // opponents
+  const row=$("oppRow"); row.innerHTML="";
+  S.players.forEach((p,i)=>{
+    if(p.human) return;
+    const d=document.createElement("div");
+    d.className="opp"+(S.turn===i?" active":"");
+    d.dataset.idx=i;
+    let shieldHTML="";
+    if(p.shield){
+      const pips = p.shield.devante ? `<span class="shield-pip dev"></span>`.repeat(p.shield.hitsLeft)
+                                    : `<span class="shield-pip"></span>`.repeat(p.shield.potions.reduce((n,x)=>n+x.hits,0));
+      shieldHTML=`<div>${pips}</div>`;
+    }
+    d.innerHTML=`<div class="oname">${p.name}</div><div class="ocount">${p.hand.length}</div><div class="olabel">cards</div>${shieldHTML}`;
+    row.appendChild(d);
+  });
+  // piles
+  $("collectCount").textContent=S.collect.length;
+  $("discardCount").textContent=S.discard.length;
+  $("burnCount").textContent=S.burn.length;
+  const dt=$("discardTop"); dt.innerHTML="";
+  if(S.discard.length){const top=S.discard[S.discard.length-1];
+    const img=document.createElement("img");
+    smartSrc(img, top.img, ()=>{dt.innerHTML=`<div style="padding:8px;font-size:10px;text-align:center;font-family:Cinzel">${top.name}</div>`;});
+    dt.appendChild(img);}
+  $("burnList").innerHTML=S.burn.filter(c=>c.kind==="devante").map(c=>c.name).join("<br>")||"—";
+  // your shield
+  const ys=$("youShield"); const me=S.players[0];
+  ys.innerHTML = me.shield
+    ? (me.shield.devante
+        ? `⛨ Devante shield (${me.shield.card.name}) — ${me.shield.hitsLeft} hit${me.shield.hitsLeft>1?"s":""} left`
+        : `⛨ ${me.shield.charName} guards you — ${me.shield.potions.length} potion${me.shield.potions.length>1?"s":""} (${me.shield.potions.reduce((n,x)=>n+x.hits,0)} hits)`)
+    : "";
+  // hand — tap to select, double-tap to inspect
+  const h=$("hand"); h.innerHTML="";
+  me.hand.forEach(c=>{
+    const el=cardEl(c);
+    if(S.sel.has(c.id)) el.classList.add("sel");
+    el.onclick=()=>{
+      const now=Date.now();
+      if(lastTap.id===c.id && now-lastTap.t<320){
+        lastTap={id:null,t:0};
+        // second tap: revert the first tap's toggle, then inspect
+        if(!(S.busy||S.turn!==0)){ S.sel.has(c.id)?S.sel.delete(c.id):S.sel.add(c.id); }
+        inspectCard(c); render(); return;
+      }
+      lastTap={id:c.id,t:now};
+      if(S.busy||S.turn!==0) return;
+      S.sel.has(c.id)?S.sel.delete(c.id):S.sel.add(c.id); render();
+    };
+    h.appendChild(el);
+  });
+  renderActions();
+}
+
+/* ---------------- action bar logic ---------------- */
+function selectedCards(){ return S.players[0].hand.filter(c=>S.sel.has(c.id)); }
+
+function analyseSelection(sel){
+  const chars = sel.filter(c=>c.kind==="character"&&!c.assistant);
+  const assts = sel.filter(c=>c.kind==="character"&&c.assistant);
+  const devs  = sel.filter(c=>c.kind==="devante");
+  const abils = sel.filter(c=>c.kind==="ability");
+  const objs  = sel.filter(c=>c.kind==="object");
+  const subs  = new Set(abils.map(a=>a.sub));
+  return {chars,assts,devs,abils,objs,subs};
+}
+
+function renderActions(){
+  const bar=$("actionBar"); bar.innerHTML="";
+  if(S.turn!==0||S.busy){ bar.innerHTML=`<div class="hint">${S.busy?"…":"Waiting for rivals…"}</div>`; return; }
+  const sel=selectedCards();
+  const a=analyseSelection(sel);
+  const mk=(label,cls,fn,dis=false)=>{const b=document.createElement("button");b.className="abtn "+cls;b.textContent=label;b.onclick=fn;b.disabled=dis;bar.appendChild(b);};
+
+  if(sel.length===0){ bar.innerHTML=`<div class="hint">Tap cards to select · double-tap to inspect.</div>`; return; }
+
+  // Dragon
+  const dragons=sel.filter(c=>c.kind==="dragon");
+  if(sel.length===1 && dragons.length===1){
+    mk("Unleash the Dragon — draw 4","primary",()=>playDragon(dragons[0]));
+    mk("Keep (deselect)","",()=>{S.sel.clear();render();});
+    return;
+  }
+  // Devante single
+  if(sel.length===1 && a.devs.length===1){
+    mk("Play Devante…","primary",()=>devanteMenu(a.devs[0]));
+    mk("Keep (deselect)","",()=>{S.sel.clear();render();});
+    return;
+  }
+  // Discard exactly one non-devante card
+  if(sel.length===1){
+    mk("Discard","danger",()=>doDiscard(sel[0]));
+  }
+  // Attack: 1 character (+≤1 assistant) + N same-sub abilities (spell or crystal)
+  if(a.chars.length===1 && a.devs.length===0 && a.objs.length===0 && a.assts.length<=1 && a.abils.length>=1 && a.subs.size===1){
+    const sub=[...a.subs][0], ch=a.chars[0];
+    if(!ch.traits.includes(sub)){
+      bar.innerHTML=`<div class="hint">${ch.name} can’t use ${TRAIT_LABEL[sub]} cards — the traits must match.</div>`;
+    } else if(sub==="spell"){
+      mk(`Cast ${a.abils.length} Spell${a.abils.length>1?"s":""}`,"primary",()=>spellFlow(ch,a.assts[0]||null,a.abils));
+    } else if(sub==="crystal"){
+      mk(`Scry with ${a.abils.length} Ball${a.abils.length>1?"s":""}`,"primary",()=>crystalFlow(ch,a.assts[0]||null,a.abils));
+    } else if(sub==="potion"){
+      mk("Set Potion Shield","primary",()=>setShieldHuman(ch,a.assts[0]||null,a.abils));
+    } else if(sub==="broomstick"){
+      bar.innerHTML=`<div class="hint">Broomsticks are defensive — you’ll be offered them automatically when attacked.</div>`;
+    }
+  }
+  if(bar.children.length===0)
+    bar.innerHTML=`<div class="hint">No valid play with this selection. A play is one card to discard, or a Character + matching Ability cards, or a Devante.</div>`;
+}
+
+/* ---------------- core mechanics ---------------- */
+function drawCards(p,n){
+  let drew=0;
+  for(let i=0;i<n;i++){
+    if(!S.collect.length) break;
+    p.hand.push(S.collect.pop()); drew++;
+  }
+  return drew;
+}
+function multiplier(ch,asst){ const adv=ch.advanced; return asst?(adv?4:2):(adv?2:1); }
+function removeFromHand(p,cards){ const ids=new Set(cards.map(c=>c.id)); p.hand=p.hand.filter(c=>!ids.has(c.id)); }
+function toDiscard(cards){ S.discard.push(...cards); }
+function toBurn(cards){ S.burn.push(...cards); if(cards.some(c=>c.kind==="devante")){ fxBurnFlash(); } }
+
+function doDiscard(card){
+  if(!tutAllows("discard")) return;
+  const me=S.players[0];
+  fxHandToDiscard([card]);
+  removeFromHand(me,[card]); toDiscard([card]); S.sel.clear();
+  log(`You discard <b>${card.name}</b>.${card.kind==="character"?" (No draw — house rule.)":""}`);
+  endTurn();
+}
+
+/* ---- shield absorption: returns units remaining after shield ---- */
+function absorbWithShield(def,units,attackType){
+  if(!def.shield || units<=0) return units;
+  const sh=def.shield;
+  if(sh.devante){
+    while(units>0 && sh.hitsLeft>0){ sh.hitsLeft--; units--; }
+    if(sh.hitsLeft<=0){ toBurn([sh.card]); def.shield=null; log(`${def.name}’s Devante shield shatters and burns.`); }
+    else log(`${def.name}’s Devante shield absorbs the blow (${sh.hitsLeft} hit left).`);
+  } else {
+    let absorbed=0;
+    while(units>0 && sh.potions.length){
+      const pot=sh.potions[0];
+      pot.hits--; units--; absorbed++;
+      if(pot.hits<=0){ toDiscard([pot.card]); sh.potions.shift(); }
+      else log(`${def.name} flips a boosted potion — one hit left on it.`);
+    }
+    if(absorbed) log(`${def.name}’s potions absorb ${absorbed} attack unit${absorbed>1?"s":""}.`);
+    if(sh.potions.length===0){
+      const spent=[sh.charCard]; if(sh.asst) spent.push(sh.asst);
+      toDiscard(spent); def.shield=null;
+      log(`${sh.charName} retires to the discard pile — ${def.name} is unguarded.`);
+    }
+  }
+  return units;
+}
+
+/* ---------------- SPELL ATTACK ---------------- */
+function spellFlow(ch,asst,spells){
+  if(!tutAllows("spell")) return;
+  const units=spells.length*multiplier(ch,asst);
+  const targets=S.players.map((p,i)=>({p,i})).filter(x=>x.i!==0);
+  allocModal({
+    title:`Cast ${spells.length} spell${spells.length>1?"s":""} with ${ch.name}${asst?" & "+asst.name:""}`,
+    desc:`${units} attack unit${units>1?"s":""} to divide between rivals (advanced/assistant multipliers included). Each unit steals one card.`,
+    targets, max:units,
+    onConfirm:(alloc)=>{
+      const total=Object.values(alloc).reduce((a,b)=>a+b,0);
+      if(total===0){toast("Assign at least one unit.");return false;}
+      const played=[ch,...(asst?[asst]:[]),...spells];
+      fxHandToDiscard(played);
+      removeFromHand(S.players[0],played); toDiscard(played); S.sel.clear();
+      S.busy=true; render();
+      resolveSpellOnTargets(S.players[0],alloc,played.length,spells.length).then(()=>{S.busy=false;endTurn();});
+      return true;
+    }
+  });
+}
+async function resolveSpellOnTargets(att,alloc,cardsPlayed,abilityCount){
+  for(const [iStr,units] of Object.entries(alloc)){
+    if(units<=0)continue;
+    const def=S.players[+iStr];
+    log(`⚔️ <b>${att.name}</b> hurls ${units} spell unit${units>1?"s":""} at <b>${def.name}</b>!`);
+    for(let k=0;k<Math.min(units,4);k++) setTimeout(()=>fxBolt(boxOf(att),boxOf(def),"#c9503a"), k*160);
+    await pause(T("beat"));
+    let rem=absorbWithShield(def,units,"spell");
+    render(); if(rem<=0){ await pause(T("beat")); continue;}
+    rem=await defendPhase(def,att,rem,"spell",abilityCount);
+    if(rem>0){
+      const stolen=await pickStealCards(att,def,rem);
+      att.hand.push(...stolen);
+      const names = (att.human||def.human)? stolen.map(c=>`<b>${c.name}</b>`).join(", ")||"nothing" : `${stolen.length} card${stolen.length!==1?"s":""}`;
+      log(`💰 <b>${att.name}</b> steals ${names} from <b>${def.name}</b>.`);
+      render(); await pause(T("beat"));
+    }
+  }
+  // amended rule: collect-on-play
+  const drew=drawCards(att,cardsPlayed);
+  if(drew) log(`<b>${att.name}</b> collects ${drew} card${drew>1?"s":""} for the cards played.`);
+  render();
+}
+
+/* ---------------- CRYSTAL ATTACK ---------------- */
+function crystalFlow(ch,asst,balls){
+  if(!tutAllows("crystal")) return;
+  const units=balls.length*multiplier(ch,asst);
+  const targets=S.players.map((p,i)=>({p,i})).filter(x=>x.i!==0);
+  allocModal({
+    title:`Scry with ${ch.name}${asst?" & "+asst.name:""}`,
+    desc:`${units} crystal unit${units>1?"s":""}. Assign units to rivals — a rival’s potions eat units first; you need one spare unit left to view their hand.`,
+    targets, max:units,
+    onConfirm:(alloc)=>{
+      const total=Object.values(alloc).reduce((a,b)=>a+b,0);
+      if(total===0){toast("Assign at least one unit.");return false;}
+      const played=[ch,...(asst?[asst]:[]),...balls];
+      fxHandToDiscard(played);
+      removeFromHand(S.players[0],played); toDiscard(played); S.sel.clear();
+      S.busy=true; render();
+      resolveCrystalOnTargets(S.players[0],alloc,played.length,balls.length).then(()=>{S.busy=false;endTurn();});
+      return true;
+    }
+  });
+}
+async function resolveCrystalOnTargets(att,alloc,cardsPlayed,abilityCount){
+  const reveals=[];
+  for(const [iStr,units] of Object.entries(alloc)){
+    if(units<=0)continue;
+    const def=S.players[+iStr];
+    log(`🔮 <b>${att.name}</b> turns ${units} crystal unit${units>1?"s":""} on <b>${def.name}</b>…`);
+    for(let k=0;k<Math.min(units,4);k++) setTimeout(()=>fxBolt(boxOf(att),boxOf(def),"#4f8f96"), k*160);
+    await pause(T("beat"));
+    let rem=absorbWithShield(def,units,"crystal");
+    render();
+    if(rem<=0){ log(`${def.name}’s defences cloud the vision.`); await pause(T("beat")); continue; }
+    rem=await defendPhase(def,att,rem,"crystal",abilityCount);
+    if(rem>0){
+      if(att.human) reveals.push(def);
+      else { att.knowledge[def===S.players[0]?0:S.players.indexOf(def)] = def.hand.filter(c=>c.kind==="devante").length; 
+             log(`👁 <b>${att.name}</b> peers into <b>${def.name}</b>’s hand.`); }
+    }
+  }
+  const drew=drawCards(att,cardsPlayed);
+  if(drew) log(`<b>${att.name}</b> collects ${drew} card${drew>1?"s":""} for the cards played.`);
+  render();
+  if(reveals.length) await showRevealedHands(reveals);
+}
+function showRevealedHands(defs){
+  return new Promise(res=>{
+    const box=$("modalBox");
+    box.innerHTML=`<h2>The crystal clears…</h2>`;
+    defs.forEach(d=>{
+      const w=document.createElement("div"); w.className="revealed-hand";
+      w.innerHTML=`<h3>${d.name}’s hand (${d.hand.length})</h3>`;
+      const mh=document.createElement("div"); mh.className="mini-hand";
+      d.hand.forEach(c=>mh.appendChild(cardEl(c)));
+      w.appendChild(mh); box.appendChild(w);
+    });
+    const b=document.createElement("button");b.className="abtn primary";b.textContent="Done";b.style.width="100%";
+    b.onclick=()=>{$("modal").classList.remove("on");res();};
+    box.appendChild(b);
+    $("modal").classList.add("on");
+  });
+}
+
+/* ---------------- DEFENSE ---------------- */
+function defendPhase(def,att,units,attackType,abilityCount){
+  // Devante attacks are handled in devante flow (only higher devante blocks)
+  return def.human ? humanDefend(def,att,units,attackType,abilityCount) : aiDefend(def,att,units,attackType,abilityCount);
+}
+function broomOptions(p){
+  const chars=p.hand.filter(c=>c.kind==="character"&&!c.assistant&&c.traits.includes("broomstick"));
+  const brooms=p.hand.filter(c=>c.kind==="ability"&&c.sub==="broomstick");
+  return {chars,brooms};
+}
+function humanDefend(def,att,units,attackType,abilityCount){
+  return new Promise(res=>{
+    const {chars,brooms}=broomOptions(def);
+    const devs=def.hand.filter(c=>c.kind==="devante");
+    const canBroom=chars.length&&brooms.length;
+    const canDev=devs.length>0 && !def.devUsedTurn;
+    if(!canBroom&&!canDev){ log(`You cannot defend — brace yourself.`); res(units); return; }
+    const box=$("modalBox");
+    box.innerHTML=`<h2>${att.name} attacks you!</h2>
+      <p>${units} ${attackType==="spell"?"spell":"crystal"} unit${units>1?"s":""} remain after your shields. Counter, or take the hit.</p>`;
+    if(canBroom){
+      // Rulebook: you can never defend with more broomsticks than the ability CARDS attacking you
+      const maxB=Math.min(units,brooms.length,abilityCount||units);
+      box.insertAdjacentHTML("beforeend",`<p style="font-size:14px">Sweep away up to <b>${maxB}</b> unit${maxB>1?"s":""} with <b>${chars[0].name}</b> + broomsticks. You draw one card per broomstick used.</p>`);
+      const st=document.createElement("div");st.className="alloc-row";
+      st.innerHTML=`<span class="an">Broomsticks</span>`;
+      const stp=document.createElement("div");stp.className="stepper";
+      let v=maxB;
+      const minus=document.createElement("button");minus.textContent="−";
+      const num=document.createElement("span");num.textContent=v;
+      const plus=document.createElement("button");plus.textContent="+";
+      minus.onclick=()=>{v=Math.max(1,v-1);num.textContent=v};
+      plus.onclick=()=>{v=Math.min(maxB,v+1);num.textContent=v};
+      stp.append(minus,num,plus); st.appendChild(stp); box.appendChild(st);
+      const b=document.createElement("button");b.className="abtn primary";b.style.width="100%";b.textContent="Counter with broomsticks";
+      b.onclick=()=>{
+        const used=brooms.slice(0,v); const chSpent=chars[0];
+        removeFromHand(def,[chSpent,...used]); toDiscard([chSpent,...used]);
+        const drew=drawCards(def,v);
+        fxSweep(boxOf(def));
+        log(`🧹 You counter with ${v} broomstick${v>1?"s":""} and draw ${drew}.`);
+        $("modal").classList.remove("on"); render(); res(units-v);
+      };
+      box.appendChild(b);
+    }
+    if(canDev){
+      const b=document.createElement("button");b.className="abtn";b.style.width="100%";b.style.marginTop="8px";
+      b.textContent=`Block everything with a Devante (burns it)`;
+      b.onclick=()=>{
+        const d=devs.sort((a,b)=>b.rank-a.rank)[0]; // spend lowest-value (highest rank number)
+        removeFromHand(def,[d]); toBurn([d]); def.devUsedTurn=true;
+        const drew=drawCards(def,2);
+        log(`📕 You burn <b>${d.name}</b> as a broomstick — attack repelled, drew ${drew}.`);
+        $("modal").classList.remove("on"); render(); res(0);
+      };
+      box.appendChild(b);
+    }
+    const skip=document.createElement("button");skip.className="abtn danger";skip.style.width="100%";skip.style.marginTop="8px";
+    skip.textContent="Take the hit";
+    skip.onclick=()=>{$("modal").classList.remove("on");res(units);};
+    box.appendChild(skip);
+    $("modal").classList.add("on");
+  });
+}
+async function aiDefend(def,att,units,attackType,abilityCount){
+  const {chars,brooms}=broomOptions(def);
+  const devs=def.hand.filter(c=>c.kind==="devante");
+  const holdingDev=devs.length;
+  // Devante block if big attack & protecting devantes
+  if(holdingDev && !def.devUsedTurn && attackType==="spell" && units>=2 && (holdingDev>=2||units>=3)){
+    const d=devs.sort((a,b)=>b.rank-a.rank)[0];
+    removeFromHand(def,[d]); toBurn([d]); def.devUsedTurn=true;
+    const drew=drawCards(def,2);
+    log(`📕 <b>${def.name}</b> burns <b>${d.name}</b> as a broomstick — attack repelled (drew ${drew}).`);
+    await showPlay(def.name, `blocks everything with a Devante!`, [d]);
+    return 0;
+  }
+  if(chars.length&&brooms.length){
+    const v=Math.min(units,brooms.length,abilityCount||units);
+    const spent=[chars[0],...brooms.slice(0,v)];
+    removeFromHand(def,spent); toDiscard(spent);
+    const drew=drawCards(def,v);
+    fxSweep(boxOf(def));
+    log(`🧹 <b>${def.name}</b> counters with ${v} broomstick${v>1?"s":""} (drew ${drew}).`);
+    await showPlay(def.name, `counters with ${v} broomstick${v>1?"s":""} + ${chars[0].name}`, spent);
+    return units-v;
+  }
+  return units;
+}
+
+/* ---------------- DRAGON ---------------- */
+async function playDragon(card){
+  if(!tutAllows("dragon")) return;
+  const me=S.players[0];
+  fxHandToDiscard([card]);
+  removeFromHand(me,[card]); toDiscard([card]); S.sel.clear();
+  S.busy=true; render();
+  const drew=drawCards(me,4);
+  const drawn=me.hand.slice(-drew);
+  log(`🐉 You unleash the <b>Dragon</b> and sweep up ${drew} cards from the Collect pile!`);
+  await showPlay("You", `unleash the Dragon — ${drew} cards from the Collect pile`, drawn);
+  S.busy=false; render(); endTurn();
+}
+
+/* ---------------- POTION SHIELD ---------------- */
+function setShieldHuman(ch,asst,potions){
+  if(!tutAllows("potion")) return;
+  const me=S.players[0];
+  if(me.shield){toast("You already have a shield in play — you can’t add to it.");return;}
+  const played=[ch,...(asst?[asst]:[]),...potions];
+  removeFromHand(me,played);
+  // Assistant flip rule: boosted potions absorb two hits each (flip, then discard)
+  me.shield={charCard:ch,charName:ch.name+(asst?" & "+asst.name:""),
+             potions:potions.map(c=>({card:c,hits:asst?2:1})),devante:false,asst:asst||null};
+  S.sel.clear();
+  log(`⛨ You set a shield: <b>${ch.name}</b>${asst?" boosted by <b>"+asst.name+"</b>":""} with ${potions.length} potion${potions.length>1?"s":""}${asst?" (each absorbs two hits)":""}.`);
+  endTurn();
+}
+
+/* ---------------- DEVANTE PLAYS ---------------- */
+function devanteMenu(card){
+  if(!tutAllows("devante")) return;
+  const box=$("modalBox");
+  box.innerHTML=`<h2>${card.name} — Rank ${card.rank}</h2>
+    <p>A Devante acts as any ability, at double strength. Playing it reveals it and sends it to the Burn pile — you lose it from your collection.</p>
+    <div class="devchoice"></div>`;
+  const grid=box.querySelector(".devchoice");
+  const opt=(label,fn)=>{const b=document.createElement("button");b.className="abtn";b.textContent=label;b.onclick=fn;grid.appendChild(b);};
+  opt("As Spell — steal 2",()=>{ $("modal").classList.remove("on"); devanteSpell(card); });
+  opt("As Crystal — view 2 hands",()=>{ $("modal").classList.remove("on"); devanteCrystal(card); });
+  opt("As Broomstick — draw 2",()=>{
+    const me=S.players[0];
+    if(me.devUsedTurn){toast("Only one Devante per turn.");return;}
+    removeFromHand(me,[card]); toBurn([card]); me.devUsedTurn=true; S.sel.clear();
+    const drew=drawCards(me,2);
+    log(`📕 You burn <b>${card.name}</b> as a broomstick and draw ${drew}.`);
+    $("modal").classList.remove("on"); endTurn();
+  });
+  opt("As Potion — shield (2 hits)",()=>{
+    const me=S.players[0];
+    if(me.shield){toast("You already have a shield in play.");return;}
+    if(me.devUsedTurn){toast("Only one Devante per turn.");return;}
+    removeFromHand(me,[card]); me.devUsedTurn=true; S.sel.clear();
+    me.shield={devante:true,card,hitsLeft:2};
+    log(`⛨ You lay <b>${card.name}</b> before you as a shield — it will absorb two attacks, then burn.`);
+    $("modal").classList.remove("on"); endTurn();
+  });
+  const cancel=document.createElement("button");cancel.className="abtn danger";cancel.style.cssText="width:100%;margin-top:10px";
+  cancel.textContent="Cancel";cancel.onclick=()=>$("modal").classList.remove("on");
+  box.appendChild(cancel);
+  $("modal").classList.add("on");
+}
+function devanteSpell(card){
+  const me=S.players[0];
+  if(me.devUsedTurn){toast("Only one Devante per turn.");return;}
+  pickOpponent("Steal 2 cards from whom?").then(async ti=>{
+    if(ti==null)return;
+    removeFromHand(me,[card]); toBurn([card]); me.devUsedTurn=true; S.sel.clear(); S.busy=true; render();
+    const def=S.players[ti];
+    log(`📕⚔️ You unleash <b>${card.name}</b> as a spell at <b>${def.name}</b>!`);
+    await pause(T("beat"));
+    // only a HIGHER-ranking devante can block (lower rank number = higher)
+    const blocked=await tryDevanteBlock(def,card);
+    if(!blocked){
+      let units=absorbWithShield(def,2,"spell");
+      const stolen=await pickStealCards(me,def,units);
+      me.hand.push(...stolen);
+      log(`💰 You steal ${stolen.map(c=>`<b>${c.name}</b>`).join(", ")||"nothing"} from <b>${def.name}</b>.`);
+    }
+    S.busy=false; render(); endTurn();
+  });
+}
+function devanteCrystal(card){
+  const me=S.players[0];
+  if(me.devUsedTurn){toast("Only one Devante per turn.");return;}
+  removeFromHand(me,[card]); toBurn([card]); me.devUsedTurn=true; S.sel.clear(); S.busy=true; render();
+  log(`📕🔮 You unleash <b>${card.name}</b> as a crystal ball.`);
+  const others=S.players.filter((p,i)=>i!==0);
+  const targets=others.slice(0,2); // views up to two hands
+  showRevealedHands(targets).then(()=>{S.busy=false;endTurn();});
+}
+function tryDevanteBlock(def,attackCard){
+  const blockers=def.hand.filter(c=>c.kind==="devante"&&c.rank<attackCard.rank);
+  if(!blockers.length||def.devUsedTurn) return Promise.resolve(false);
+  if(!def.human){
+    // AI blocks if it can spare (keeps at least the count lead simple: block if holding >=2)
+    if(def.hand.filter(c=>c.kind==="devante").length>=2){
+      const b=blockers.sort((a,b)=>b.rank-a.rank)[0];
+      removeFromHand(def,[b]); toBurn([b]); def.devUsedTurn=true;
+      log(`🛡 <b>${def.name}</b> blocks with the higher-ranked <b>${b.name}</b>! Both Devante cards burn.`);
+      return Promise.resolve(true);
+    }
+    return Promise.resolve(false);
+  }
+  return new Promise(res=>{
+    const box=$("modalBox");
+    box.innerHTML=`<h2>Devante attack!</h2><p>${attackCard.name} (rank ${attackCard.rank}) strikes you. You hold a higher-ranked Devante — block it? Both would burn.</p>`;
+    const b1=document.createElement("button");b1.className="abtn primary";b1.style.width="100%";
+    const blocker=blockers.sort((a,b)=>b.rank-a.rank)[0];
+    b1.textContent=`Block with ${blocker.name} (rank ${blocker.rank})`;
+    b1.onclick=()=>{removeFromHand(def,[blocker]);toBurn([blocker]);def.devUsedTurn=true;
+      log(`🛡 You block with <b>${blocker.name}</b> — both Devante cards burn.`);
+      $("modal").classList.remove("on");render();res(true);};
+    const b2=document.createElement("button");b2.className="abtn danger";b2.style.cssText="width:100%;margin-top:8px";
+    b2.textContent="Take the hit";
+    b2.onclick=()=>{$("modal").classList.remove("on");res(false);};
+    box.append(b1,b2);$("modal").classList.add("on");
+  });
+}
+
+/* ---------------- modals ---------------- */
+function allocModal({title,desc,targets,max,onConfirm}){
+  const box=$("modalBox");
+  box.innerHTML=`<h2>${title}</h2><p>${desc}</p><p style="font-size:14px">Units left: <b id="unitsLeft">${max}</b></p>`;
+  const alloc={};
+  targets.forEach(({p,i})=>{
+    alloc[i]=0;
+    const row=document.createElement("div");row.className="alloc-row";
+    row.innerHTML=`<span class="an">${p.name} <small style="color:var(--parchment-dim)">(${p.hand.length} cards${p.shield?", shielded":""})</small></span>`;
+    const stp=document.createElement("div");stp.className="stepper";
+    const minus=document.createElement("button");minus.textContent="−";
+    const num=document.createElement("span");num.textContent="0";
+    const plus=document.createElement("button");plus.textContent="+";
+    const used=()=>Object.values(alloc).reduce((a,b)=>a+b,0);
+    minus.onclick=()=>{if(alloc[i]>0){alloc[i]--;num.textContent=alloc[i];$("unitsLeft").textContent=max-used();}};
+    plus.onclick=()=>{if(used()<max){alloc[i]++;num.textContent=alloc[i];$("unitsLeft").textContent=max-used();}};
+    stp.append(minus,num,plus);row.appendChild(stp);box.appendChild(row);
+  });
+  const go=document.createElement("button");go.className="abtn primary";go.style.cssText="width:100%;margin-top:6px";go.textContent="Confirm";
+  go.onclick=()=>{ if(onConfirm(alloc)!==false) $("modal").classList.remove("on"); };
+  const cancel=document.createElement("button");cancel.className="abtn danger";cancel.style.cssText="width:100%;margin-top:8px";cancel.textContent="Cancel";
+  cancel.onclick=()=>$("modal").classList.remove("on");
+  box.append(go,cancel);
+  $("modal").classList.add("on");
+}
+function pickOpponent(title){
+  return new Promise(res=>{
+    const box=$("modalBox");
+    box.innerHTML=`<h2>${title}</h2>`;
+    S.players.forEach((p,i)=>{
+      if(i===0)return;
+      const b=document.createElement("button");b.className="abtn";b.style.cssText="width:100%;margin-top:8px";
+      b.textContent=`${p.name} — ${p.hand.length} cards${p.shield?" ⛨":""}`;
+      b.onclick=()=>{$("modal").classList.remove("on");res(i);};
+      box.appendChild(b);
+    });
+    const c=document.createElement("button");c.className="abtn danger";c.style.cssText="width:100%;margin-top:8px";c.textContent="Cancel";
+    c.onclick=()=>{$("modal").classList.remove("on");res(null);};
+    box.appendChild(c);
+    $("modal").classList.add("on");
+  });
+}
+let lastTap={id:null,t:0};
+function inspectCard(c){
+  const box=$("modalBox");
+  let sub="";
+  if(c.kind==="character") sub = c.assistant?"Assistant — pairs with a Character to double the effect":(c.advanced?"Advanced ×2 · ":"")+"Abilities: "+c.traits.map(t=>TRAIT_LABEL[t]).join(", ");
+  if(c.kind==="devante") sub = `Devante card · Rank ${c.rank} — acts as any ability at double strength`;
+  if(c.kind==="ability") sub = "Ability card — play with a matching Character";
+  if(c.kind==="object") sub = "Object card — no powers; discard fodder";
+  if(c.kind==="dragon") sub = "Dragon — play to the discard pile and draw 4 from the Collect pile";
+  box.innerHTML=`<h2>${c.name}</h2><p>${sub}</p>`;
+  const img=document.createElement("img"); img.id="inspectImg"; img.alt=c.name;
+  smartSrc(img,c.img,()=>{img.remove();});
+  box.appendChild(img);
+  const b=document.createElement("button");b.className="abtn primary";b.style.cssText="width:100%;margin-top:12px";b.textContent="Close";
+  b.onclick=()=>$("modal").classList.remove("on");
+  box.appendChild(b);
+  $("modal").classList.add("on");
+}
+function showFullLog(){
+  const box=$("modalBox");
+  box.innerHTML=`<h2>Chronicle</h2><div id="logFull">${S.log.slice(-60).map(l=>`<div>${l}</div>`).join("")}</div>`;
+  const b=document.createElement("button");b.className="abtn primary";b.style.cssText="width:100%;margin-top:10px";b.textContent="Close";
+  b.onclick=()=>$("modal").classList.remove("on");
+  box.appendChild(b);$("modal").classList.add("on");
+  const lf=$("logFull");lf.scrollTop=lf.scrollHeight;
+}
+
+/* ---------------- visual fx ---------------- */
+function boxOf(p){
+  if(p.human) return $("you");
+  const i=S.players.indexOf(p);
+  return document.querySelector(`.opp[data-idx="${i}"]`)||$("oppRow");
+}
+function centerOf(el){ const r=el.getBoundingClientRect(); return {x:r.left+r.width/2,y:r.top+r.height/2}; }
+function fxBolt(fromEl,toEl,color){
+  try{
+    const a=centerOf(fromEl), b=centerOf(toEl);
+    const d=document.createElement("div"); d.className="fx-bolt";
+    d.style.cssText+=`left:${a.x-10}px;top:${a.y-10}px;background:${color};box-shadow:0 0 18px ${color},0 0 34px ${color}`;
+    document.body.appendChild(d);
+    requestAnimationFrame(()=>{ d.style.left=(b.x-10)+"px"; d.style.top=(b.y-10)+"px"; d.style.opacity="0.15"; });
+    setTimeout(()=>d.remove(),700);
+  }catch(e){}
+}
+function fxSweep(overEl){
+  try{
+    const c=centerOf(overEl);
+    const d=document.createElement("div"); d.className="fx-sweep"; d.textContent="🧹";
+    d.style.cssText+=`left:${c.x+50}px;top:${c.y-10}px;transform:rotate(30deg)`;
+    document.body.appendChild(d);
+    requestAnimationFrame(()=>{ d.style.left=(c.x-90)+"px"; d.style.transform="rotate(-50deg)"; d.style.opacity="0"; });
+    setTimeout(()=>d.remove(),700);
+  }catch(e){}
+}
+function fxBurnFlash(){
+  const b=document.querySelector("#burnPile .pile-card");
+  if(!b) return; b.classList.remove("flash"); void b.offsetWidth; b.classList.add("flash");
+}
+/* animate the selected cards flying from your hand to the discard pile */
+function fxHandToDiscard(cards){
+  try{
+    const target=$("discardTop").getBoundingClientRect();
+    cards.forEach((c,k)=>{
+      const src=document.querySelector(`#hand .card[data-id="${c.id}"]`);
+      if(!src) return;
+      const r=src.getBoundingClientRect();
+      const clone=src.cloneNode(true); clone.className="fx-card";
+      clone.style.cssText+=`left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px`;
+      document.body.appendChild(clone);
+      setTimeout(()=>{ clone.style.left=target.left+"px"; clone.style.top=target.top+"px";
+        clone.style.width=target.width+"px"; clone.style.height=target.height+"px"; clone.style.opacity="0.25"; },30+k*70);
+      setTimeout(()=>clone.remove(),900+k*70);
+    });
+  }catch(e){}
+}
+/* a face-down card flies from a fan card to a rival's box (they stole from you) */
+function fxFlyToRival(fromEl,att){
+  try{
+    const r=fromEl.getBoundingClientRect();
+    const t=boxOf(att).getBoundingClientRect();
+    const clone=cardBackEl(); clone.classList.add("fx-card");
+    clone.style.cssText+=`left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px;border:1.5px solid var(--bronze)`;
+    document.body.appendChild(clone);
+    requestAnimationFrame(()=>{ clone.style.left=(t.left+t.width/2-20)+"px"; clone.style.top=(t.top+10)+"px";
+      clone.style.width="40px"; clone.style.height="66px"; clone.style.opacity="0.2"; });
+    setTimeout(()=>clone.remove(),800);
+  }catch(e){}
+}
+
+/* ---------------- stealing: fan out & pick ---------------- */
+async function pickStealCards(att,def,n){
+  n=Math.min(n,def.hand.length);
+  if(n<=0) return [];
+  if(att.human && !def.human) return fanPickInteractive(def,n);
+  if(!att.human && def.human) return fanPickWatch(att,def,n);
+  const stolen=[];
+  for(let k=0;k<n;k++) stolen.push(def.hand.splice(Math.floor(Math.random()*def.hand.length),1)[0]);
+  return stolen;
+}
+function buildFan(count){
+  const row=document.createElement("div"); row.id="fanRow"; const cards=[];
+  for(let i=0;i<count;i++){
+    const fc=cardBackEl("fan-card");
+    fc.style.transform=`rotate(${(i-(count-1)/2)*3}deg)`;
+    row.appendChild(fc); cards.push(fc);
+  }
+  return {row,cards};
+}
+function flipFanCard(el,card){
+  el.classList.add("flipped");
+  el.innerHTML="";
+  const face=cardEl(card); face.style.cssText="width:100%;height:100%;flex:none;cursor:default";
+  el.appendChild(face);
+}
+/* You steal: rival's hand fans out face-down, tap to pick */
+function fanPickInteractive(def,n){
+  return new Promise(res=>{
+    const mapping=shuffle([...def.hand]); // the target may shuffle before spells resolve
+    const box=$("modalBox");
+    box.innerHTML=`<h2>Choose your plunder</h2>
+      <p><b>${def.name}</b> fans out their hand. Pick <b id="fanLeft">${n}</b> card${n>1?"s":""}.</p>`;
+    const {row,cards}=buildFan(mapping.length);
+    box.appendChild(row);
+    const stolen=[]; let left=n;
+    cards.forEach((el,i)=>{
+      el.onclick=()=>{
+        if(left<=0||el.classList.contains("flipped"))return;
+        const card=mapping[i];
+        def.hand=def.hand.filter(c=>c.id!==card.id);
+        stolen.push(card); left--;
+        flipFanCard(el,card);
+        if(card.kind==="devante") el.classList.add("shimmer");
+        $("fanLeft").textContent=left;
+        if(left<=0) setTimeout(()=>{$("modal").classList.remove("on");res(stolen);}, Math.round(T("beat")));
+      };
+    });
+    $("modal").classList.add("on");
+  });
+}
+/* A rival steals from you: watch them pick from your fanned hand */
+function fanPickWatch(att,def,n){
+  return new Promise(res=>{
+    const mapping=shuffle([...def.hand]);
+    const box=$("modalBox");
+    box.innerHTML=`<h2>${att.name} reaches for your cards…</h2>
+      <p>Your hand is fanned face-down. ${att.name} picks ${n} card${n>1?"s":""}.</p>`;
+    const {row,cards}=buildFan(mapping.length);
+    box.appendChild(row);
+    $("modal").classList.add("on");
+    const stolen=[]; let k=0;
+    const pickOne=()=>{
+      const avail=cards.map((el,i)=>({el,i})).filter(x=>!x.el.classList.contains("flipped"));
+      const pick=avail[Math.floor(Math.random()*avail.length)];
+      pick.el.classList.add("aipick");
+      setTimeout(()=>{
+        const card=mapping[pick.i];
+        def.hand=def.hand.filter(c=>c.id!==card.id);
+        stolen.push(card);
+        flipFanCard(pick.el,card);
+        if(card.kind==="devante") pick.el.classList.add("shimmer");
+        setTimeout(()=>fxFlyToRival(pick.el,att), Math.round(T("beat")*0.9));
+        k++;
+        if(k<n) setTimeout(pickOne, Math.round(T("beat")*1.3));
+        else setTimeout(()=>{$("modal").classList.remove("on");res(stolen);}, Math.round(T("reveal")));
+      }, Math.round(T("beat")*0.5));
+    };
+    pickOne();
+  });
+}
+
+/* ---------------- turn engine ---------------- */
+const pause=ms=>new Promise(r=>setTimeout(r,ms));
+
+/* Your turn opens with a glowing arrow on the Collect pile — tap it to draw. */
+function humanTapDraw(){
+  return new Promise(res=>{
+    const pileWrap=$("collectPile");
+    const pile=pileWrap.querySelector(".pile-card");
+    pileWrap.classList.add("your-draw");
+    log(`Your turn — <b>tap the Collect pile</b> to draw your card.`);
+    pile.onclick=async ()=>{
+      pile.onclick=null; pileWrap.classList.remove("your-draw");
+      const me=S.players[0];
+      drawCards(me,1); render();
+      const c=me.hand[me.hand.length-1];
+      if(c){
+        const isDev=c.kind==="devante";
+        await showPlay("You", isDev? "✨ You draw a <b>Devante card</b>! Guard it well." : "draw from the Collect pile",
+          [c], Math.round(T("reveal")*(isDev?1.1:0.7)));
+      }
+      res();
+    };
+  });
+}
+
+async function beginTurn(){
+  const p=S.players[S.turn];
+  p.devUsedTurn=false;
+  if(!S.collect.length){ return gameOver("The Collect pile is empty."); }
+  if(p.human){
+    await humanTapDraw();
+    render();
+    log(`Your turn — make one play.`);
+  } else {
+    S.busy=true; render();
+    log(`<b>${p.name}</b> draws a card…`); await pause(Math.round(T("beat")*0.8));
+    drawCards(p,1); render();
+    log(`<b>${p.name}</b> is thinking…`); await pause(T("aiThink"));
+    await aiTurn(p); S.busy=false; endTurn();
+  }
+}
+function endTurn(){
+  if(TUT){ tutActionDone(); return; }
+  S.sel.clear();
+  render();
+  if(!S.collect.length) return gameOver("The Collect pile is empty.");
+  S.turn=(S.turn+1)%S.players.length;
+  setTimeout(beginTurn,900);
+}
+
+/* ---------------- AI ---------------- */
+async function aiTurn(p){
+  const idx=S.players.indexOf(p);
+  const hand=p.hand;
+  const chars=hand.filter(c=>c.kind==="character"&&!c.assistant);
+  const assts=hand.filter(c=>c.kind==="character"&&c.assistant);
+  const spells=hand.filter(c=>c.kind==="ability"&&c.sub==="spell");
+  const balls=hand.filter(c=>c.kind==="ability"&&c.sub==="crystal");
+  const potions=hand.filter(c=>c.kind==="ability"&&c.sub==="potion");
+  const spellChar=chars.find(c=>c.traits.includes("spell"));
+  const crystalChar=chars.find(c=>c.traits.includes("crystal"));
+  const potionChar=chars.find(c=>c.traits.includes("potion"));
+  // pick a victim: known devante holder > most cards
+  const rivals=S.players.map((pl,i)=>({pl,i})).filter(x=>x.i!==idx);
+  rivals.sort((a,b)=>{
+    const ka=p.knowledge[a.i]||0, kb=p.knowledge[b.i]||0;
+    if(kb!==ka)return kb-ka;
+    return b.pl.hand.length-a.pl.hand.length;
+  });
+  const victim=rivals[0];
+
+  await pause(T("aiThink"));
+  // 0. dragon: free card advantage, always worth it
+  const dragon=hand.find(c=>c.kind==="dragon");
+  if(dragon){
+    removeFromHand(p,[dragon]); toDiscard([dragon]);
+    const drew=drawCards(p,4);
+    log(`🐉 <b>${p.name}</b> unleashes the <b>Dragon</b> and draws ${drew} cards!`);
+    await showPlay(p.name, `unleashes the Dragon — draws ${drew} cards`, [dragon]);
+    render(); return;
+  }
+  // 1. shield up if valuable
+  if(potionChar&&potions.length>=2&&!p.shield&&Math.random()<.7){
+    const asst=(assts[0]&&Math.random()<.5)?assts[0]:null;
+    const used=potions.slice(0,Math.min(3,potions.length));
+    const played=[potionChar,...(asst?[asst]:[]),...used];
+    removeFromHand(p,played);
+    p.shield={charCard:potionChar,charName:potionChar.name+(asst?" & "+asst.name:""),
+              potions:used.map(c=>({card:c,hits:asst?2:1})),devante:false,asst};
+    log(`⛨ <b>${p.name}</b> sets a potion shield (${used.length}${asst?", boosted":""}).`);
+    await showPlay(p.name, `sets a potion shield${asst?" boosted by "+asst.name:""}`, played);
+    render(); return;
+  }
+  // 2. spell attack
+  if(spellChar&&spells.length){
+    const asst=assts[0]||null;
+    const use=spells.slice(0,Math.min(3,spells.length));
+    const units=use.length*multiplier(spellChar,asst);
+    const played=[spellChar,...(asst?[asst]:[]),...use];
+    removeFromHand(p,played); toDiscard(played);
+    const alloc={}; alloc[victim.i]=units;
+    render();
+    await showPlay(p.name, `attacks <b>${victim.pl.name}</b> — ${use.length} spell${use.length>1?"s":""} with ${spellChar.name}${asst?" & "+asst.name:""} (${units} unit${units>1?"s":""})`, played);
+    await resolveSpellOnTargets(p,alloc,played.length,use.length);
+    return;
+  }
+  // 3. scry
+  if(crystalChar&&balls.length&&Math.random()<.8){
+    const use=balls.slice(0,Math.min(2,balls.length));
+    const played=[crystalChar,...use];
+    removeFromHand(p,played); toDiscard(played);
+    const alloc={}; alloc[victim.i]=use.length;
+    render();
+    await showPlay(p.name, `scries <b>${victim.pl.name}</b> with ${crystalChar.name}`, played);
+    await resolveCrystalOnTargets(p,alloc,played.length,use.length);
+    return;
+  }
+  // 4. discard junk (objects first, then spare abilities)
+  const junk = hand.find(c=>c.kind==="object") || hand.find(c=>c.kind==="ability"&&c.sub==="broomstick"&&hand.filter(x=>x.sub==="broomstick").length>2)
+            || hand.find(c=>c.kind==="ability") || hand.find(c=>c.kind==="character");
+  if(junk){ removeFromHand(p,[junk]); toDiscard([junk]);
+    log(`<b>${p.name}</b> discards <b>${junk.name}</b>.`);
+    await showPlay(p.name, `discards a card`, [junk], 1800);
+    render(); return; }
+  log(`<b>${p.name}</b> passes.`); 
+}
+
+/* ---------------- TUTORIAL ---------------- */
+let TUT=null;
+function mk(kind,name){
+  if(kind==="character"){const t=CHARACTERS.find(c=>c.name===name);return {id:++uid,kind:"character",...t};}
+  if(kind==="devante"){const t=DEVANTES.find(d=>d.name===name);return {id:++uid,kind:"devante",...t};}
+  if(kind==="ability"){return {id:++uid,kind:"ability",sub:name,name:TRAIT_LABEL[name],img:ABILITY_ART[name]};}
+  const t=OBJECTS.find(o=>o.name===name)||OBJECTS[0];return {id:++uid,kind:"object",...t};
+}
+const TUT_STEPS=[
+ {expect:null, text:`Welcome to <b>Devante</b>! The goal: hold the most <b>Devante cards</b> when the game ends. On each turn you draw one card, then make <b>one play</b>. Let's learn every play, one at a time.`},
+ {expect:"discard", hand:[["object","Dusty Candelabra"],["object","Forgotten Goblet"],["object","Blank Parchment"],["ability","broomstick"]],
+  text:`The simplest play: <b>discard one card</b>. Object cards have no powers — they're clutter (and handy chaff for thieves to steal instead of your treasures). Tap the <b>Dusty Candelabra</b>, then tap <b>Discard</b>.`,
+  hint:`Tap one Object card, then the Discard button.`,
+  done:`That's a whole turn: draw, then one play. Note: discarding earns you nothing — you only collect cards when you play <b>against a rival</b>. That's next.`},
+ {expect:"spell", hand:[["character","Mason"],["ability","spell"],["object","Forgotten Goblet"]], rivalCount:5,
+  text:`The <b>Spell attack</b>. Ability cards only work with a Character who bears the matching icon. Mason bears the Spell icon — tap <b>Mason</b> and the <b>Spell</b> card, then <b>Cast 1 Spell</b>, and assign it to your Rival. You'll fan out their hand and pick your plunder!`,
+  hint:`Select Mason + the Spell card together, then tap Cast.`,
+  done:`You stole a card — and then drew <b>2 from the Collect pile</b>, one for each card you played (Mason + the Spell). Playing against rivals always refunds you like this. Discarding never does.`},
+ {expect:"spell", hand:[["character","Fairy Queen"],["character","Getergrin"],["ability","spell"],["object","Dusty Candelabra"]], rivalCount:6,
+  text:`Multipliers! The <b>Fairy Queen</b> is <b>Advanced ×2</b>, and <b>Getergrin</b> is an Assistant who doubles it again. Select all three: Fairy Queen + Getergrin + the Spell — one spell card becomes <b>4 steals</b>. With several spells you could even split the units between different rivals.`,
+  hint:`Select Fairy Queen, Getergrin AND the Spell card, then Cast.`,
+  done:`One spell, four cards — ×2 for Advanced, ×2 again for the Assistant. And you collected 3 more for the cards you played. Assistants can never be played alone, and only one per play.`},
+ {expect:"crystal", hand:[["character","Diamone"],["ability","crystal"],["ability","crystal"],["object","Blank Parchment"]], rivalCount:5, rivalShield:1,
+  text:`Spying. Only <b>Diamone</b> can use <b>Crystal Balls</b>. Your Rival has a potion shield (see the green pip) — shields eat your crystal units first, so you need a spare unit to see through. Select Diamone + <b>both</b> Crystal Balls and scry the Rival.`,
+  hint:`Select Diamone and both Crystal Ball cards, then Scry.`,
+  done:`One ball burst their potion, the second revealed their hand — knowledge is power when choosing whom to rob. With several balls you can view several rivals in one play.`},
+ {expect:"defend", hand:[["character","Naldy"],["ability","broomstick"],["ability","broomstick"],["object","Forgotten Goblet"],["object","Dusty Candelabra"]], rivalCount:4,
+  text:`Defence! Your Rival is about to attack you with 2 spells. When the prompt appears, counter with <b>Naldy and your Broomsticks</b> — each broomstick sweeps away one incoming unit, and you draw a card for each one used. Defending never costs you your turn.`,
+  script:async()=>{
+    S.busy=true; render();
+    const rival=S.players[1];
+    const ch=mk("character","Mason"), s1=mk("ability","spell"), s2=mk("ability","spell");
+    await showPlay(rival.name,"attacks You — 2 spells with Mason",[ch,s1,s2]);
+    toDiscard([ch,s1,s2]);
+    await resolveSpellOnTargets(rival,{0:2},3,2);
+    S.busy=false; tutActionDone();
+  },
+  done:`Broomsticks are purely defensive — you can never counter with more broomsticks than the ability cards attacking you, and they're powerless against Devante cards.`},
+ {expect:"potion", hand:[["character","Odorf"],["ability","potion"],["ability","potion"],["object","Blank Parchment"]], rivalCount:5,
+  text:`Standing protection. Only <b>Odorf</b> commands <b>Potions</b>. Select Odorf + both Potions and <b>Set Potion Shield</b> — they sit in front of you, and every future attack must burn through them first. Once set, you can't add more later.`,
+  hint:`Select Odorf and both Potion cards, then Set Potion Shield.`,
+  done:`Shielded! Each attack unit against you now destroys one potion instead of hurting you. When the last potion pops, Odorf retires to the discard pile — where anyone may claim her again.`},
+ {expect:"devante", hand:[["devante","Corium"],["object","Forgotten Goblet"],["object","Dusty Candelabra"]], rivalCount:5,
+  text:`The treasures themselves. A <b>Devante card</b> needs no Character and can act as any ability at <b>double strength</b> — but playing one reveals it and <b>burns it forever</b>, costing you a point. Ranks matter: only a higher-ranked Devante can block a lower one, and <b>Corium ranks 1st</b> — unstoppable. Tap Corium and try it as a Spell.`,
+  hint:`Tap the Corium card, then "Play Devante…".`,
+  done:`Powerful — but you burned a treasure to do it. One Devante per turn, whether attacking or blocking. Hoard them, spend them only when it wins you more than it costs.`},
+ {expect:null, text:`That's everything! The game ends when the <b>Collect pile empties</b>. Most Devante cards wins; ties go to the highest-ranking Devante held — Corium, rank 1, beats all. You gain Devante cards three ways: your opening hand, <b>drawing them</b> from the Collect pile, and <b>stealing</b> them. Watch for the <b>Dragon card</b> too — play it to the discard pile and sweep up 4 fresh cards. Good luck!`, finale:true},
+];
+function startTutorial(){
+  S={players:[
+      {name:"You",human:true,hand:[],shield:null,devUsedTurn:false},
+      {name:"Rival",human:false,hand:[],shield:null,devUsedTurn:false,knowledge:{}}],
+     collect:[],discard:[],burn:[],turn:0,log:[],busy:false,sel:new Set()};
+  for(let i=0;i<40;i++)S.collect.push(mk("object",OBJECTS[i%3].name));
+  TUT={i:-1};
+  $("startScreen").style.display="none";
+  $("game").classList.add("on");
+  initBacks();
+  log("Tutorial — learn at your own pace.");
+  tutNext();
+}
+function tutPanelShow(text,btnLabel,cb){
+  $("tutText").innerHTML=text;
+  const h=$("tutBtnHolder"); h.innerHTML="";
+  if(btnLabel){const b=document.createElement("button");b.className="abtn primary";b.textContent=btnLabel;b.onclick=cb;h.appendChild(b);}
+  $("tutPanel").classList.add("on");
+}
+function tutNext(){
+  TUT.i++;
+  const st=TUT_STEPS[TUT.i];
+  if(!st){ location.reload(); return; }
+  const me=S.players[0], rival=S.players[1];
+  me.hand=(st.hand||[]).map(a=>mk(a[0],a[1])); me.shield=null; me.devUsedTurn=false;
+  rival.hand=Array.from({length:st.rivalCount||0},(_,i)=>mk("object",OBJECTS[i%3].name));
+  rival.shield=st.rivalShield?{charCard:mk("character","Odorf"),charName:"Odorf",devante:false,asst:null,
+    potions:Array.from({length:st.rivalShield},()=>({card:mk("ability","potion"),hits:1}))}:null;
+  S.sel.clear(); S.busy=false; S.turn=0; render();
+  if(st.expect===null) tutPanelShow(st.text, st.finale?"Finish — back to menu":"Continue", ()=>tutNext());
+  else { tutPanelShow(st.text); if(st.script) st.script(); }
+}
+function tutActionDone(){
+  const st=TUT_STEPS[TUT.i];
+  S.sel.clear(); render();
+  tutPanelShow(st.done||"Well done!", "Continue", ()=>tutNext());
+}
+function tutAllows(type){
+  if(!TUT) return true;
+  const st=TUT_STEPS[TUT.i];
+  if(st.expect!==type){ toast(st.hint||"Follow the lesson instruction above your hand."); return false; }
+  return true;
+}
+
+/* ---------------- game over ---------------- */
+function gameOver(reason){
+  S.busy=true;
+  const scores=S.players.map(p=>{
+    const devs=p.hand.filter(c=>c.kind==="devante");
+    if(p.shield&&p.shield.devante) devs.push(p.shield.card);
+    return {p,devs,count:devs.length,best:devs.length?Math.min(...devs.map(d=>d.rank)):99};
+  });
+  scores.sort((a,b)=> b.count-a.count || a.best-b.best);
+  const w=scores[0];
+  const tie = scores.length>1 && scores[1].count===w.count;
+  const box=$("modalBox");
+  box.innerHTML=`<h2>${w.count===0?"No victor…":w.p.name+(w.p.human?" win!":" wins!")}</h2>
+    <p>${reason}${tie?` Tie broken by highest-ranking Devante (${DEVANTES.find(d=>d.rank===w.best)?.name||""}).`:""}</p>
+    ${scores.map(s=>`<div class="alloc-row"><span class="an">${s.p.name}</span><span>${s.count} Devante${s.count!==1?"s":""}${s.devs.length?" — "+s.devs.map(d=>d.name).join(", "):""}</span></div>`).join("")}`;
+  const b=document.createElement("button");b.className="abtn primary";b.style.cssText="width:100%;margin-top:10px";b.textContent="Play again";
+  b.onclick=()=>location.reload();
+  box.appendChild(b);
+  $("modal").classList.add("on");
+}
+</script>
+</body>
+</html>
