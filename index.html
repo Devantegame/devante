@@ -281,6 +281,32 @@
   #burnPile .pile-card.flash{animation:burnFlash 1s ease}
   /* inspector */
   #inspectImg{width:100%;max-height:62dvh;object-fit:contain;border-radius:12px;display:block;margin:0 auto}
+  /* ability chips floating on character cards */
+  .trait-chips{position:absolute;top:4px;left:0;right:0;display:flex;justify-content:center;gap:3px;z-index:3;pointer-events:none}
+  .tchip{width:19px;height:19px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-size:11px;line-height:1;border:1px solid rgba(201,167,95,.9);box-shadow:0 1px 4px rgba(0,0,0,.7)}
+  .tchip.spell{background:#f6d3da}.tchip.broomstick{background:#efe9cf}
+  .tchip.crystal{background:#d9ecf6}.tchip.potion{background:#e2f2d2}
+  .tchip.x2{background:linear-gradient(#e8cf8e,#b8964f);font-family:'Cinzel',serif;font-weight:900;font-size:9px;color:#3a2f12}
+  /* fan cards show the real card back */
+  .fan-card img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+  .fan-card span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    font-family:'Cinzel',serif;font-weight:900;font-size:9px;letter-spacing:.18em;color:var(--brass);transform:rotate(-90deg)}
+  /* DRAMATIC devante play */
+  #playFx.drama{background:radial-gradient(circle at 50% 45%, rgba(60,18,10,.88), rgba(8,6,3,.95))}
+  #playFx.drama #playFxBox{border-color:#e8cf8e;box-shadow:0 0 60px rgba(232,150,80,.5),0 0 120px rgba(179,64,47,.4);
+    animation:dramaShake .5s ease}
+  #playFx.drama .pfw{font-size:22px;color:#ffdf9e;text-shadow:0 0 18px rgba(255,190,90,.9);letter-spacing:.12em}
+  #playFx.drama #playFxCards .card{--card-w:150px;flex-basis:150px;width:150px;height:260px}
+  @keyframes dramaShake{0%,100%{transform:translate(0,0)}15%{transform:translate(-7px,3px)}30%{transform:translate(6px,-4px)}
+    45%{transform:translate(-5px,-3px)}60%{transform:translate(4px,3px)}75%{transform:translate(-3px,1px)}}
+  /* audio chips */
+  #musicChip,#sfxChip{
+    position:absolute;top:50%;transform:translateY(-50%);
+    font-size:13px;border:1px solid #3a351f;border-radius:14px;padding:3px 9px;background:#1c1a0e;cursor:pointer;
+  }
+  #musicChip{left:10px} #sfxChip{left:56px}
+  #musicChip.off,#sfxChip.off{opacity:.35}
   .toast{
     position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:120;
     background:#242112;border:1px solid var(--brass);border-radius:24px;padding:9px 20px;
@@ -291,6 +317,10 @@
   @media (min-width:700px){
     :root{--card-w:104px;--card-h:182px}
     #hand{justify-content:center}
+    .pile-card,#discardTop{width:116px;height:186px;border-radius:12px}
+    #tableMid{gap:34px}
+    .pile .plabel{font-size:12px}
+    #drawArrow{top:-52px;font-size:36px}
   }
   @media (prefers-reduced-motion: reduce){
     *{animation:none!important;transition:none!important}
@@ -337,7 +367,7 @@
       <div class="plabel">Burn</div><div class="pcount" id="burnCount">0</div>
     </div>
   </div>
-  <div id="logBar"><span id="logText" onclick="showFullLog()">Welcome to Devante.</span><span id="speedChip" onclick="cycleSpeed()">⏱ SLOW</span></div>
+  <div id="logBar"><span id="musicChip" onclick="toggleMusic()">🎵</span><span id="sfxChip" onclick="toggleSfx()">🔊</span><span id="logText" onclick="showFullLog()" style="display:inline-block;padding:0 92px 0 96px">Welcome to Devante.</span><span id="speedChip" onclick="cycleSpeed()">⏱ SLOW</span></div>
   <div id="you">
     <div id="tutPanel"><div class="tt">Tutorial</div><div class="tb" id="tutText"></div><div id="tutBtnHolder"></div></div>
     <div id="youShield"></div>
@@ -388,6 +418,32 @@ const CHARACTERS = [
 const TEMPO = { beat: 1300, reveal: 2600, aiThink: 1500 };
 const SPEEDS = [ {name:"SLOW",mult:1.7}, {name:"NORMAL",mult:1}, {name:"FAST",mult:0.55} ];
 let speedIdx = 0; // default Slow — Tommy's request
+/* ---- sound & music (files live in the /music folder; missing files fail silently) ---- */
+let musicOn=true, sfxOn=true, musicEl=null;
+function audioTry(el,base){
+  const tries=[`music/${base}.mp3`,`music/${base}.wav`,`music/${base}.m4a`]; let k=0;
+  el.onerror=()=>{ k++; if(k<tries.length) el.src=tries[k]; };
+  el.src=tries[0];
+}
+function playSfx(name){
+  if(!sfxOn) return;
+  try{ const a=new Audio(); a.volume=0.7; audioTry(a,name); a.play().catch(()=>{}); }catch(e){}
+}
+function startMusic(){
+  if(musicEl||!musicOn) return;
+  try{ musicEl=new Audio(); musicEl.loop=true; musicEl.volume=0.35; audioTry(musicEl,"theme"); musicEl.play().catch(()=>{}); }catch(e){}
+}
+function updateAvChips(){
+  const m=document.getElementById("musicChip"), x=document.getElementById("sfxChip");
+  if(m) m.classList.toggle("off",!musicOn);
+  if(x) x.classList.toggle("off",!sfxOn);
+}
+function toggleMusic(){ musicOn=!musicOn;
+  if(musicOn){ if(musicEl) musicEl.play().catch(()=>{}); else startMusic(); }
+  else if(musicEl) musicEl.pause();
+  updateAvChips();
+}
+function toggleSfx(){ sfxOn=!sfxOn; updateAvChips(); }
 function T(key){ return Math.round(TEMPO[key]*SPEEDS[speedIdx].mult); }
 function setSpeed(i,btn){ speedIdx=i;
   document.querySelectorAll("#speedPick .opp-btn").forEach(b=>b.style.boxShadow="");
@@ -408,19 +464,19 @@ const DEVANTES = [
 ];
 
 const ABILITY_ART = {
-  spell:"ability-spell.jpg",           
+  spell:"ability-spell.jpg",           // not uploaded yet — placeholder shows
   broomstick:"ability-broomstick.jpg",
   crystal:"ability-crystal-ball.jpg",
-  potion:"ability-potion.jpg",         
+  potion:"ability-potion.jpg",         // not uploaded yet — placeholder shows
 };
 const OBJECTS = [
   {name:"Forgotten Goblet",  img:"object-forgotten-goblet.jpg"},
-  {name:"Blank Parchment",   img:"object-blank-parchment.jpg"},
+  {name:"Blank Parchment",   img:"object-blank-parchment.jpg"}, // not uploaded yet
   {name:"Dusty Candelabra",  img:"object-dusty-candelabra.jpg"},
 ];
 const ABILITY_COUNTS = {spell:20, crystal:8, broomstick:8, potion:8};
-const DRAGON_COUNT = 2; 
-const OBJECT_COUNT_EACH = 10;   
+const DRAGON_COUNT = 1; // Tommy: adjust if the physical deck has more
+const OBJECT_COUNT_EACH = 10;   // amended: 10 each, not 13
 const HAND_SIZE = 8;
 const AI_NAMES = ["The Witch","The Wizard","The Warlock"];
 const TRAIT_LABEL = {spell:"Spell", crystal:"Crystal Ball", broomstick:"Broomstick", potion:"Potion"};
@@ -452,7 +508,7 @@ function startGame(nAI){
   for(let i=0;i<nAI;i++) S.players.push({name:AI_NAMES[i], human:false, hand:[], shield:null, devUsedTurn:false, knowledge:{}});
   // deal
   for(let r=0;r<HAND_SIZE;r++) S.players.forEach(p=>p.hand.push(S.collect.pop()));
-  
+  // flip 3 to discard — Devante flipped at setup burn instead
   let flipped=0;
   while(flipped<3 && S.collect.length){
     const c=S.collect.pop();
@@ -461,7 +517,7 @@ function startGame(nAI){
   }
   $("startScreen").style.display="none";
   $("game").classList.add("on");
-  initBacks();
+  initBacks(); startMusic();
   log("The game begins. Draw a card each turn, then make one play.");
   render();
   beginTurn();
@@ -515,6 +571,13 @@ function cardEl(c, mini=false){
     d.prepend(ph);});
   d.appendChild(img);
   if(c.kind==="devante") d.classList.add("has-shine");
+  if(c.kind==="character"){
+    const chips=document.createElement("div"); chips.className="trait-chips";
+    const ICON={spell:"🪄",broomstick:"🧹",crystal:"🔮",potion:"🧪"};
+    (c.traits||[]).forEach(t=>{const ch=document.createElement("div");ch.className="tchip "+t;ch.textContent=ICON[t];chips.appendChild(ch);});
+    if(c.advanced||c.assistant){const x=document.createElement("div");x.className="tchip x2";x.textContent="×2";chips.appendChild(x);}
+    d.appendChild(chips);
+  }
   const tag=document.createElement("div"); tag.className="tag";
   let sub="";
   if(c.kind==="character") sub = c.assistant?"Assistant ×2":(c.advanced?"Advanced · ":"")+c.traits.map(t=>TRAIT_LABEL[t]).join(" · ");
@@ -658,6 +721,7 @@ function toBurn(cards){ S.burn.push(...cards); if(cards.some(c=>c.kind==="devant
 function doDiscard(card){
   if(!tutAllows("discard")) return;
   const me=S.players[0];
+  playSfx("discard");
   fxHandToDiscard([card]);
   removeFromHand(me,[card]); toDiscard([card]); S.sel.clear();
   log(`You discard <b>${card.name}</b>.${card.kind==="character"?" (No draw — house rule.)":""}`);
@@ -716,6 +780,7 @@ async function resolveSpellOnTargets(att,alloc,cardsPlayed,abilityCount){
     if(units<=0)continue;
     const def=S.players[+iStr];
     log(`⚔️ <b>${att.name}</b> hurls ${units} spell unit${units>1?"s":""} at <b>${def.name}</b>!`);
+    playSfx("spell");
     for(let k=0;k<Math.min(units,4);k++) setTimeout(()=>fxBolt(boxOf(att),boxOf(def),"#c9503a"), k*160);
     await pause(T("beat"));
     let rem=absorbWithShield(def,units,"spell");
@@ -762,6 +827,7 @@ async function resolveCrystalOnTargets(att,alloc,cardsPlayed,abilityCount){
     if(units<=0)continue;
     const def=S.players[+iStr];
     log(`🔮 <b>${att.name}</b> turns ${units} crystal unit${units>1?"s":""} on <b>${def.name}</b>…`);
+    playSfx("crystal");
     for(let k=0;k<Math.min(units,4);k++) setTimeout(()=>fxBolt(boxOf(att),boxOf(def),"#4f8f96"), k*160);
     await pause(T("beat"));
     let rem=absorbWithShield(def,units,"crystal");
@@ -836,6 +902,7 @@ function humanDefend(def,att,units,attackType,abilityCount){
         const used=brooms.slice(0,v); const chSpent=chars[0];
         removeFromHand(def,[chSpent,...used]); toDiscard([chSpent,...used]);
         const drew=drawCards(def,v);
+        playSfx("broom");
         fxSweep(boxOf(def));
         log(`🧹 You counter with ${v} broomstick${v>1?"s":""} and draw ${drew}.`);
         $("modal").classList.remove("on"); render(); res(units-v);
@@ -850,7 +917,8 @@ function humanDefend(def,att,units,attackType,abilityCount){
         removeFromHand(def,[d]); toBurn([d]); def.devUsedTurn=true;
         const drew=drawCards(def,2);
         log(`📕 You burn <b>${d.name}</b> as a broomstick — attack repelled, drew ${drew}.`);
-        $("modal").classList.remove("on"); render(); res(0);
+        $("modal").classList.remove("on"); render();
+        showDevanteDrama("You", d, `burn <b>${d.name}</b> — the attack is repelled! (drew ${drew})`).then(()=>res(0));
       };
       box.appendChild(b);
     }
@@ -871,7 +939,7 @@ async function aiDefend(def,att,units,attackType,abilityCount){
     removeFromHand(def,[d]); toBurn([d]); def.devUsedTurn=true;
     const drew=drawCards(def,2);
     log(`📕 <b>${def.name}</b> burns <b>${d.name}</b> as a broomstick — attack repelled (drew ${drew}).`);
-    await showPlay(def.name, `blocks everything with a Devante!`, [d]);
+    await showDevanteDrama(def.name, d, `burns <b>${d.name}</b> — the attack is repelled!`);
     return 0;
   }
   if(chars.length&&brooms.length){
@@ -879,6 +947,7 @@ async function aiDefend(def,att,units,attackType,abilityCount){
     const spent=[chars[0],...brooms.slice(0,v)];
     removeFromHand(def,spent); toDiscard(spent);
     const drew=drawCards(def,v);
+    playSfx("broom");
     fxSweep(boxOf(def));
     log(`🧹 <b>${def.name}</b> counters with ${v} broomstick${v>1?"s":""} (drew ${drew}).`);
     await showPlay(def.name, `counters with ${v} broomstick${v>1?"s":""} + ${chars[0].name}`, spent);
@@ -911,6 +980,7 @@ function setShieldHuman(ch,asst,potions){
   // Assistant flip rule: boosted potions absorb two hits each (flip, then discard)
   me.shield={charCard:ch,charName:ch.name+(asst?" & "+asst.name:""),
              potions:potions.map(c=>({card:c,hits:asst?2:1})),devante:false,asst:asst||null};
+  playSfx("potion");
   S.sel.clear();
   log(`⛨ You set a shield: <b>${ch.name}</b>${asst?" boosted by <b>"+asst.name+"</b>":""} with ${potions.length} potion${potions.length>1?"s":""}${asst?" (each absorbs two hits)":""}.`);
   endTurn();
@@ -921,28 +991,31 @@ function devanteMenu(card){
   if(!tutAllows("devante")) return;
   const box=$("modalBox");
   box.innerHTML=`<h2>${card.name} — Rank ${card.rank}</h2>
-    <p>A Devante acts as any ability, at double strength. Playing it reveals it and sends it to the Burn pile — you lose it from your collection.</p>
+    <p>A Devante wields immense power, needing no Character. Playing it reveals it and sends it to the Burn pile — you lose it from your collection.</p>
     <div class="devchoice"></div>`;
   const grid=box.querySelector(".devchoice");
   const opt=(label,fn)=>{const b=document.createElement("button");b.className="abtn";b.textContent=label;b.onclick=fn;grid.appendChild(b);};
-  opt("As Spell — steal 2",()=>{ $("modal").classList.remove("on"); devanteSpell(card); });
-  opt("As Crystal — view 2 hands",()=>{ $("modal").classList.remove("on"); devanteCrystal(card); });
+  opt("As Spell — steal 8, split as you wish",()=>{ $("modal").classList.remove("on"); devanteSpell(card); });
+  opt("As Crystal — see every hand",()=>{ $("modal").classList.remove("on"); devanteCrystal(card); });
+  opt("Shield-Breaker — shatter all of a rival's shields",()=>{ $("modal").classList.remove("on"); devanteShatter(card); });
   opt("As Broomstick — draw 2",()=>{
     const me=S.players[0];
     if(me.devUsedTurn){toast("Only one Devante per turn.");return;}
     removeFromHand(me,[card]); toBurn([card]); me.devUsedTurn=true; S.sel.clear();
     const drew=drawCards(me,2);
     log(`📕 You burn <b>${card.name}</b> as a broomstick and draw ${drew}.`);
-    $("modal").classList.remove("on"); endTurn();
+    $("modal").classList.remove("on");
+    showDevanteDrama("You", card, `sacrifice <b>${card.name}</b> as a Broomstick — draw ${drew}`).then(()=>endTurn());
   });
-  opt("As Potion — shield (2 hits)",()=>{
+  opt("As Potion — shield (8 hits)",()=>{
     const me=S.players[0];
     if(me.shield){toast("You already have a shield in play.");return;}
     if(me.devUsedTurn){toast("Only one Devante per turn.");return;}
     removeFromHand(me,[card]); me.devUsedTurn=true; S.sel.clear();
-    me.shield={devante:true,card,hitsLeft:2};
-    log(`⛨ You lay <b>${card.name}</b> before you as a shield — it will absorb two attacks, then burn.`);
-    $("modal").classList.remove("on"); endTurn();
+    me.shield={devante:true,card,hitsLeft:8};
+    log(`⛨ You lay <b>${card.name}</b> before you as a shield — it will absorb eight attacks, then burn.`);
+    $("modal").classList.remove("on");
+    showDevanteDrama("You", card, `lay <b>${card.name}</b> before you as a mighty shield`).then(()=>endTurn());
   });
   const cancel=document.createElement("button");cancel.className="abtn danger";cancel.style.cssText="width:100%;margin-top:10px";
   cancel.textContent="Cancel";cancel.onclick=()=>$("modal").classList.remove("on");
@@ -952,19 +1025,58 @@ function devanteMenu(card){
 function devanteSpell(card){
   const me=S.players[0];
   if(me.devUsedTurn){toast("Only one Devante per turn.");return;}
-  pickOpponent("Steal 2 cards from whom?").then(async ti=>{
+  const targets=S.players.map((p,i)=>({p,i})).filter(x=>x.i!==0);
+  allocModal({
+    title:`${card.name} as a Spell — 8 steals`,
+    desc:`Divide up to 8 steals between your rivals however you wish. Broomsticks cannot stop a Devante; only a higher-ranking Devante blocks it.`,
+    targets, max:8,
+    onConfirm:(alloc)=>{
+      const total=Object.values(alloc).reduce((a,b)=>a+b,0);
+      if(total===0){toast("Assign at least one steal.");return false;}
+      removeFromHand(me,[card]); toBurn([card]); me.devUsedTurn=true; S.sel.clear(); S.busy=true; render();
+      (async()=>{
+        await showDevanteDrama("You", card, `unleash <b>${card.name}</b> as a Spell!`);
+        for(const [iStr,units] of Object.entries(alloc)){
+          if(units<=0) continue;
+          const def=S.players[+iStr];
+          log(`📕⚔️ <b>${card.name}</b> strikes at <b>${def.name}</b>!`);
+          for(let k=0;k<Math.min(units,4);k++) setTimeout(()=>fxBolt(boxOf(me),boxOf(def),"#e8a04a"), k*140);
+          await pause(T("beat"));
+          const blocked=await tryDevanteBlock(def,card);
+          if(blocked) continue;
+          let rem=absorbWithShield(def,units,"spell");
+          if(rem>0){
+            const stolen=await pickStealCards(me,def,rem);
+            me.hand.push(...stolen);
+            if(stolen.some(c=>c.kind==="devante")) playSfx("found");
+            log(`💰 You steal ${stolen.map(c=>`<b>${c.name}</b>`).join(", ")||"nothing"} from <b>${def.name}</b>.`);
+            render();
+          }
+        }
+        S.busy=false; render(); endTurn();
+      })();
+      return true;
+    }
+  });
+}
+/* Shield-Breaker: shatter every shield a rival has, in one blow */
+function devanteShatter(card){
+  const me=S.players[0];
+  if(me.devUsedTurn){toast("Only one Devante per turn.");return;}
+  pickOpponent("Shatter whose shields?").then(async ti=>{
     if(ti==null)return;
-    removeFromHand(me,[card]); toBurn([card]); me.devUsedTurn=true; S.sel.clear(); S.busy=true; render();
     const def=S.players[ti];
-    log(`📕⚔️ You unleash <b>${card.name}</b> as a spell at <b>${def.name}</b>!`);
-    await pause(T("beat"));
-    // only a HIGHER-ranking devante can block (lower rank number = higher)
+    removeFromHand(me,[card]); toBurn([card]); me.devUsedTurn=true; S.sel.clear(); S.busy=true; render();
+    await showDevanteDrama("You", card, `hurl <b>${card.name}</b> at <b>${def.name}</b>'s defences!`);
     const blocked=await tryDevanteBlock(def,card);
     if(!blocked){
-      let units=absorbWithShield(def,2,"spell");
-      const stolen=await pickStealCards(me,def,units);
-      me.hand.push(...stolen);
-      log(`💰 You steal ${stolen.map(c=>`<b>${c.name}</b>`).join(", ")||"nothing"} from <b>${def.name}</b>.`);
+      if(!def.shield){ log(`<b>${def.name}</b> had no shields — the blow lands on empty air.`); }
+      else if(def.shield.devante){ toBurn([def.shield.card]); def.shield=null;
+        log(`💥 <b>${def.name}</b>'s Devante shield is obliterated!`); }
+      else { const spent=[...def.shield.potions.map(x=>x.card), def.shield.charCard]; if(def.shield.asst) spent.push(def.shield.asst);
+        toDiscard(spent); def.shield=null;
+        log(`💥 Every one of <b>${def.name}</b>'s potions shatters — Odorf is swept to the discard pile!`); }
+      fxBolt(boxOf(me),boxOf(def),"#e8a04a");
     }
     S.busy=false; render(); endTurn();
   });
@@ -973,10 +1085,12 @@ function devanteCrystal(card){
   const me=S.players[0];
   if(me.devUsedTurn){toast("Only one Devante per turn.");return;}
   removeFromHand(me,[card]); toBurn([card]); me.devUsedTurn=true; S.sel.clear(); S.busy=true; render();
-  log(`📕🔮 You unleash <b>${card.name}</b> as a crystal ball.`);
-  const others=S.players.filter((p,i)=>i!==0);
-  const targets=others.slice(0,2); // views up to two hands
-  showRevealedHands(targets).then(()=>{S.busy=false;endTurn();});
+  log(`📕🔮 You unleash <b>${card.name}</b> as a crystal ball — every hand is laid bare.`);
+  (async()=>{
+    await showDevanteDrama("You", card, `unleash <b>${card.name}</b> — the crystal sees all!`);
+    await showRevealedHands(S.players.filter((p,i)=>i!==0));
+    S.busy=false; endTurn();
+  })();
 }
 function tryDevanteBlock(def,attackCard){
   const blockers=def.hand.filter(c=>c.kind==="devante"&&c.rank<attackCard.rank);
@@ -987,7 +1101,7 @@ function tryDevanteBlock(def,attackCard){
       const b=blockers.sort((a,b)=>b.rank-a.rank)[0];
       removeFromHand(def,[b]); toBurn([b]); def.devUsedTurn=true;
       log(`🛡 <b>${def.name}</b> blocks with the higher-ranked <b>${b.name}</b>! Both Devante cards burn.`);
-      return Promise.resolve(true);
+      return showDevanteDrama(def.name, b, `blocks with the higher-ranked <b>${b.name}</b>!`).then(()=>true);
     }
     return Promise.resolve(false);
   }
@@ -999,7 +1113,8 @@ function tryDevanteBlock(def,attackCard){
     b1.textContent=`Block with ${blocker.name} (rank ${blocker.rank})`;
     b1.onclick=()=>{removeFromHand(def,[blocker]);toBurn([blocker]);def.devUsedTurn=true;
       log(`🛡 You block with <b>${blocker.name}</b> — both Devante cards burn.`);
-      $("modal").classList.remove("on");render();res(true);};
+      $("modal").classList.remove("on");render();
+      showDevanteDrama("You", blocker, `block with the higher-ranked <b>${blocker.name}</b>!`).then(()=>res(true));};
     const b2=document.createElement("button");b2.className="abtn danger";b2.style.cssText="width:100%;margin-top:8px";
     b2.textContent="Take the hit";
     b2.onclick=()=>{$("modal").classList.remove("on");res(false);};
@@ -1054,7 +1169,7 @@ function inspectCard(c){
   const box=$("modalBox");
   let sub="";
   if(c.kind==="character") sub = c.assistant?"Assistant — pairs with a Character to double the effect":(c.advanced?"Advanced ×2 · ":"")+"Abilities: "+c.traits.map(t=>TRAIT_LABEL[t]).join(", ");
-  if(c.kind==="devante") sub = `Devante card · Rank ${c.rank} — acts as any ability at double strength`;
+  if(c.kind==="devante") sub = `Devante card · Rank ${c.rank} — steal 8 across rivals, see every hand, repel any attack, shatter all shields, or stand as an 8-hit shield. Burns when played.`;
   if(c.kind==="ability") sub = "Ability card — play with a matching Character";
   if(c.kind==="object") sub = "Object card — no powers; discard dross";
   if(c.kind==="dragon") sub = "Dragon — play to the discard pile and draw 4 from the Collect pile";
@@ -1074,6 +1189,14 @@ function showFullLog(){
   b.onclick=()=>$("modal").classList.remove("on");
   box.appendChild(b);$("modal").classList.add("on");
   const lf=$("logFull");lf.scrollTop=lf.scrollHeight;
+}
+
+/* Devante plays are a BIG deal — full drama treatment */
+function showDevanteDrama(who,card,modeText){
+  playSfx("devante");
+  const fx=$("playFx");
+  fx.classList.add("drama");
+  return showPlay(who, modeText, [card], Math.round(T("reveal")*1.3)).then(()=>fx.classList.remove("drama"));
 }
 
 /* ---------------- visual fx ---------------- */
@@ -1179,8 +1302,9 @@ function fanPickInteractive(def,n){
         const card=mapping[i];
         def.hand=def.hand.filter(c=>c.id!==card.id);
         stolen.push(card); left--;
+        playSfx("pick");
         flipFanCard(el,card);
-        if(card.kind==="devante") el.classList.add("shimmer");
+        if(card.kind==="devante"){ el.classList.add("shimmer"); playSfx("found"); }
         $("fanLeft").textContent=left;
         if(left<=0) setTimeout(()=>{$("modal").classList.remove("on");res(stolen);}, Math.round(T("beat")));
       };
@@ -1207,8 +1331,9 @@ function fanPickWatch(att,def,n){
         const card=mapping[pick.i];
         def.hand=def.hand.filter(c=>c.id!==card.id);
         stolen.push(card);
+        playSfx("pick");
         flipFanCard(pick.el,card);
-        if(card.kind==="devante") pick.el.classList.add("shimmer");
+        if(card.kind==="devante"){ pick.el.classList.add("shimmer"); playSfx("found"); }
         setTimeout(()=>fxFlyToRival(pick.el,att), Math.round(T("beat")*0.9));
         k++;
         if(k<n) setTimeout(pickOne, Math.round(T("beat")*1.3));
@@ -1232,12 +1357,17 @@ function humanTapDraw(){
     pile.onclick=async ()=>{
       pile.onclick=null; pileWrap.classList.remove("your-draw");
       const me=S.players[0];
-      drawCards(me,1); render();
-      const c=me.hand[me.hand.length-1];
-      if(c){
-        const isDev=c.kind==="devante";
-        await showPlay("You", isDev? "✨ You draw a <b>Devante card</b>! Guard it well." : "draw from the Collect pile",
-          [c], Math.round(T("reveal")*(isDev?1.1:0.7)));
+      const n = me.hand.length===0 ? 2 : 1;   // empty hand: draw two this turn
+      playSfx("pick");
+      drawCards(me,n); render();
+      const drawn=me.hand.slice(-n);
+      if(drawn.length){
+        const gotDev=drawn.some(c=>c.kind==="devante");
+        if(gotDev) playSfx("found");
+        await showPlay("You",
+          gotDev? "✨ You draw a <b>Devante card</b>! Guard it well." :
+          (n===2? "empty-handed — you draw <b>two</b> from the Collect pile" : "draw from the Collect pile"),
+          drawn, Math.round(T("reveal")*(gotDev?1.1:0.7)));
       }
       res();
     };
@@ -1254,8 +1384,9 @@ async function beginTurn(){
     log(`Your turn — make one play.`);
   } else {
     S.busy=true; render();
-    log(`<b>${p.name}</b> draws a card…`); await pause(Math.round(T("beat")*0.8));
-    drawCards(p,1); render();
+    const nDraw = p.hand.length===0 ? 2 : 1;
+    log(`<b>${p.name}</b> draws ${nDraw===2?"two cards (empty hand)":"a card"}…`); await pause(Math.round(T("beat")*0.8));
+    drawCards(p,nDraw); render();
     log(`<b>${p.name}</b> is thinking…`); await pause(T("aiThink"));
     await aiTurn(p); S.busy=false; endTurn();
   }
@@ -1308,6 +1439,7 @@ async function aiTurn(p){
     removeFromHand(p,played);
     p.shield={charCard:potionChar,charName:potionChar.name+(asst?" & "+asst.name:""),
               potions:used.map(c=>({card:c,hits:asst?2:1})),devante:false,asst};
+    playSfx("potion");
     log(`⛨ <b>${p.name}</b> sets a potion shield (${used.length}${asst?", boosted":""}).`);
     await showPlay(p.name, `sets a potion shield${asst?" boosted by "+asst.name:""}`, played);
     render(); return;
@@ -1339,7 +1471,7 @@ async function aiTurn(p){
   // 4. discard junk (objects first, then spare abilities)
   const junk = hand.find(c=>c.kind==="object") || hand.find(c=>c.kind==="ability"&&c.sub==="broomstick"&&hand.filter(x=>x.sub==="broomstick").length>2)
             || hand.find(c=>c.kind==="ability") || hand.find(c=>c.kind==="character");
-  if(junk){ removeFromHand(p,[junk]); toDiscard([junk]);
+  if(junk){ playSfx("discard"); removeFromHand(p,[junk]); toDiscard([junk]);
     log(`<b>${p.name}</b> discards <b>${junk.name}</b>.`);
     await showPlay(p.name, `discards a card`, [junk], 1800);
     render(); return; }
@@ -1387,9 +1519,9 @@ const TUT_STEPS=[
  {expect:"potion", hand:[["character","Odorf"],["ability","potion"],["ability","potion"],["object","Blank Parchment"]], rivalCount:5,
   text:`Standing protection. Only <b>Odorf</b> commands <b>Potions</b>. Select Odorf + both Potions and <b>Set Potion Shield</b> — they sit in front of you, and every future attack must burn through them first. Once set, you can't add more later.`,
   hint:`Select Odorf and both Potion cards, then Set Potion Shield.`,
-  done:`Shielded! Each attack unit against you now destroys one potion instead of hurting you. When the last potion pops, Odorf retires to the discard pile — where anyone may claim her again.`},
+  done:`Shielded! Each attack unit against you now destroys one potion instead of hurting you. When the last potion pops, Odorf goes to the discard pile along with them — and in this game, the discard pile is never reshuffled, so spent cards are gone for good.`},
  {expect:"devante", hand:[["devante","Corium"],["object","Forgotten Goblet"],["object","Dusty Candelabra"]], rivalCount:5,
-  text:`The treasures themselves. A <b>Devante card</b> needs no Character and can act as any ability at <b>double strength</b> — but playing one reveals it and <b>burns it forever</b>, costing you a point. Ranks matter: only a higher-ranked Devante can block a lower one, and <b>Corium ranks 1st</b> — unstoppable. Tap Corium and try it as a Spell.`,
+  text:`The treasures themselves. A <b>Devante card</b> needs no Character and wields immense power: as a Spell it steals <b>8 cards, split between rivals as you wish</b>; as a Crystal it reveals <b>every hand</b>; as a Broomstick it repels <b>any</b> attack; as a Potion it stands as an <b>8-hit shield</b>; as a Shield-Breaker it <b>shatters all</b> of a rival's shields at once. But playing one burns it forever — costing you a point. Only a higher-ranked Devante can block one, and <b>Corium ranks 1st</b> — unstoppable. Tap Corium and try it as a Spell.`,
   hint:`Tap the Corium card, then "Play Devante…".`,
   done:`Powerful — but you burned a treasure to do it. One Devante per turn, whether attacking or blocking. Hoard them, spend them only when it wins you more than it costs.`},
  {expect:null, text:`That's everything! The game ends when the <b>Collect pile empties</b>. Most Devante cards wins; ties go to the highest-ranking Devante held — Corium, rank 1, beats all. You gain Devante cards three ways: your opening hand, <b>drawing them</b> from the Collect pile, and <b>stealing</b> them. Watch for the <b>Dragon card</b> too — play it to the discard pile and sweep up 4 fresh cards. Good luck!`, finale:true},
@@ -1403,7 +1535,7 @@ function startTutorial(){
   TUT={i:-1};
   $("startScreen").style.display="none";
   $("game").classList.add("on");
-  initBacks();
+  initBacks(); startMusic();
   log("Tutorial — learn at your own pace.");
   tutNext();
 }
@@ -1452,7 +1584,8 @@ function gameOver(reason){
   const box=$("modalBox");
   box.innerHTML=`<h2>${w.count===0?"No victor…":w.p.name+(w.p.human?" win!":" wins!")}</h2>
     <p>${reason}${tie?` Tie broken by highest-ranking Devante (${DEVANTES.find(d=>d.rank===w.best)?.name||""}).`:""}</p>
-    ${scores.map(s=>`<div class="alloc-row"><span class="an">${s.p.name}</span><span>${s.count} Devante${s.count!==1?"s":""}${s.devs.length?" — "+s.devs.map(d=>d.name).join(", "):""}</span></div>`).join("")}`;
+    ${scores.map(s=>`<div class="alloc-row"><span class="an">${s.p.name}</span><span>${s.count} Devante${s.count!==1?"s":""}${s.devs.length?" — "+s.devs.map(d=>d.name).join(", "):""}</span></div>`).join("")}
+    <div class="alloc-row" style="border-color:#4a2318"><span class="an" style="color:#d99a83">Burned</span><span>${(b=>b.length? b.map(d=>d.name).join(", ") : "none")(S.burn.filter(c=>c.kind==="devante"))}</span></div>`;
   const b=document.createElement("button");b.className="abtn primary";b.style.cssText="width:100%;margin-top:10px";b.textContent="Play again";
   b.onclick=()=>location.reload();
   box.appendChild(b);
