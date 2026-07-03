@@ -326,6 +326,12 @@
   .verdict-banner.win{color:#ffdf9e;text-shadow:0 0 34px rgba(255,200,90,.9),0 0 70px rgba(255,180,70,.5)}
   .verdict-banner.lose{color:#b3402f;text-shadow:0 0 26px rgba(179,64,47,.7)}
   @keyframes verdictIn{from{opacity:0;transform:scale(2.4)}to{opacity:1;transform:scale(1)}}
+  /* audio panel sliders */
+  .vol-row{display:flex;align-items:center;gap:12px;border:1px solid #3a351f;border-radius:10px;padding:12px;margin-bottom:10px;background:#1c1a0e}
+  .vol-row .vlabel{font-family:'Cinzel',serif;font-size:13px;font-weight:700;width:74px}
+  .vol-row input[type=range]{flex:1;accent-color:var(--brass);height:26px}
+  .vol-row .vpct{width:44px;text-align:right;font-size:14px;color:var(--parchment-dim)}
+  .vol-row .abtn{padding:7px 13px;font-size:11px}
   /* audio chips */
   #musicChip,#sfxChip{
     position:absolute;top:50%;transform:translateY(-50%);
@@ -394,7 +400,7 @@
       <div class="plabel">Burn</div><div class="pcount" id="burnCount">0</div>
     </div>
   </div>
-  <div id="logBar"><span id="musicChip" onclick="toggleMusic()">🎵</span><span id="sfxChip" onclick="toggleSfx()">🔊</span><span id="logText" onclick="showFullLog()" style="display:inline-block;padding:0 92px 0 96px">Welcome to Devante.</span><span id="speedChip" onclick="cycleSpeed()">⏱ SLOW</span></div>
+  <div id="logBar"><span id="musicChip" onclick="openAudioPanel()">🎵</span><span id="sfxChip" onclick="openAudioPanel()">🔊</span><span id="logText" onclick="showFullLog()" style="display:inline-block;padding:0 92px 0 96px">Welcome to Devante.</span><span id="speedChip" onclick="cycleSpeed()">⏱ SLOW</span></div>
   <div id="you">
     <div id="tutPanel"><div class="tt">Tutorial</div><div class="tb" id="tutText"></div><div id="tutBtnHolder"></div></div>
     <div id="youShield"></div>
@@ -453,18 +459,19 @@ const SPEEDS = [ {name:"SLOW",mult:1.7}, {name:"NORMAL",mult:1}, {name:"FAST",mu
 let speedIdx = 0; // default Slow — Tommy's request
 /* ---- sound & music (files live in the /music folder; missing files fail silently) ---- */
 let musicOn=true, sfxOn=true, musicEl=null;
+let musicVol=35, sfxVol=70;   // 0–100, adjustable in the audio panel
 function audioTry(el,base){
   const tries=[`music/${base}.mp3`,`music/${base}.wav`,`music/${base}.m4a`]; let k=0;
   el.onerror=()=>{ k++; if(k<tries.length) el.src=tries[k]; };
   el.src=tries[0];
 }
 function playSfx(name){
-  if(!sfxOn) return;
-  try{ const a=new Audio(); a.volume=0.7; audioTry(a,name); a.play().catch(()=>{}); }catch(e){}
+  if(!sfxOn||sfxVol<=0) return;
+  try{ const a=new Audio(); a.volume=sfxVol/100; audioTry(a,name); a.play().catch(()=>{}); }catch(e){}
 }
 function startMusic(){
   if(musicEl||!musicOn) return;
-  try{ musicEl=new Audio(); musicEl.loop=true; musicEl.volume=0.35; audioTry(musicEl,"theme"); musicEl.play().catch(()=>{}); }catch(e){}
+  try{ musicEl=new Audio(); musicEl.loop=true; musicEl.volume=musicVol/100; audioTry(musicEl,"theme"); musicEl.play().catch(()=>{}); }catch(e){}
 }
 function updateAvChips(){
   const m=document.getElementById("musicChip"), x=document.getElementById("sfxChip");
@@ -477,6 +484,35 @@ function toggleMusic(){ musicOn=!musicOn;
   updateAvChips();
 }
 function toggleSfx(){ sfxOn=!sfxOn; updateAvChips(); }
+/* Audio panel: on/off + volume for music and sound effects, independently */
+function openAudioPanel(){
+  const box=$("modalBox");
+  box.innerHTML=`<h2>Audio</h2><p>Switch each channel on or off, and set its volume.</p>`;
+  const mkRow=(label,getOn,getVol,onToggle,onVol,preview)=>{
+    const row=document.createElement("div"); row.className="vol-row";
+    const lb=document.createElement("div"); lb.className="vlabel"; lb.textContent=label;
+    const tg=document.createElement("button"); tg.className="abtn"+(getOn()?" primary":"");
+    tg.textContent=getOn()?"ON":"OFF";
+    tg.onclick=()=>{ onToggle(); tg.textContent=getOn()?"ON":"OFF"; tg.className="abtn"+(getOn()?" primary":""); };
+    const sl=document.createElement("input"); sl.type="range"; sl.min=0; sl.max=100; sl.value=getVol();
+    const pct=document.createElement("div"); pct.className="vpct"; pct.textContent=getVol()+"%";
+    sl.oninput=()=>{ onVol(+sl.value); pct.textContent=sl.value+"%"; };
+    if(preview) sl.onchange=()=>preview();
+    row.append(lb,tg,sl,pct);
+    return row;
+  };
+  box.appendChild(mkRow("🎵 Music", ()=>musicOn, ()=>musicVol,
+    ()=>toggleMusic(),
+    v=>{ musicVol=v; if(musicEl) musicEl.volume=musicVol/100; }));
+  box.appendChild(mkRow("🔊 Effects", ()=>sfxOn, ()=>sfxVol,
+    ()=>toggleSfx(),
+    v=>{ sfxVol=v; },
+    ()=>playSfx("pick")));
+  const b=document.createElement("button"); b.className="abtn primary"; b.style.cssText="width:100%;margin-top:6px"; b.textContent="Done";
+  b.onclick=()=>$("modal").classList.remove("on");
+  box.appendChild(b);
+  $("modal").classList.add("on");
+}
 function T(key){ return Math.round(TEMPO[key]*SPEEDS[speedIdx].mult); }
 function setSpeed(i,btn){ speedIdx=i;
   document.querySelectorAll("#speedPick .opp-btn").forEach(b=>b.style.boxShadow="");
