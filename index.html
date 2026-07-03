@@ -1056,7 +1056,7 @@ function inspectCard(c){
   if(c.kind==="character") sub = c.assistant?"Assistant — pairs with a Character to double the effect":(c.advanced?"Advanced ×2 · ":"")+"Abilities: "+c.traits.map(t=>TRAIT_LABEL[t]).join(", ");
   if(c.kind==="devante") sub = `Devante card · Rank ${c.rank} — acts as any ability at double strength`;
   if(c.kind==="ability") sub = "Ability card — play with a matching Character";
-  if(c.kind==="object") sub = "Object card — no powers; discard fodder";
+  if(c.kind==="object") sub = "Object card — no powers; discard dross";
   if(c.kind==="dragon") sub = "Dragon — play to the discard pile and draw 4 from the Collect pile";
   box.innerHTML=`<h2>${c.name}</h2><p>${sub}</p>`;
   const img=document.createElement("img"); img.id="inspectImg"; img.alt=c.name;
