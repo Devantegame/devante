@@ -408,21 +408,21 @@ const DEVANTES = [
 ];
 
 const ABILITY_ART = {
-  spell:"ability-spell.jpg",           // not uploaded yet — placeholder shows
+  spell:"ability-spell.jpg",           
   broomstick:"ability-broomstick.jpg",
   crystal:"ability-crystal-ball.jpg",
-  potion:"ability-potion.jpg",         // not uploaded yet — placeholder shows
+  potion:"ability-potion.jpg",         
 };
 const OBJECTS = [
   {name:"Forgotten Goblet",  img:"object-forgotten-goblet.jpg"},
-  {name:"Blank Parchment",   img:"object-blank-parchment.jpg"}, // not uploaded yet
+  {name:"Blank Parchment",   img:"object-blank-parchment.jpg"},
   {name:"Dusty Candelabra",  img:"object-dusty-candelabra.jpg"},
 ];
 const ABILITY_COUNTS = {spell:20, crystal:8, broomstick:8, potion:8};
-const DRAGON_COUNT = 1; // Tommy: adjust if the physical deck has more
-const OBJECT_COUNT_EACH = 10;   // amended: 10 each, not 13
+const DRAGON_COUNT = 2; 
+const OBJECT_COUNT_EACH = 10;   
 const HAND_SIZE = 8;
-const AI_NAMES = ["Marie","Adam","The Warlock"];
+const AI_NAMES = ["The Witch","The Wizard","The Warlock"];
 const TRAIT_LABEL = {spell:"Spell", crystal:"Crystal Ball", broomstick:"Broomstick", potion:"Potion"};
 
 /* ---------------- state ---------------- */
@@ -452,7 +452,7 @@ function startGame(nAI){
   for(let i=0;i<nAI;i++) S.players.push({name:AI_NAMES[i], human:false, hand:[], shield:null, devUsedTurn:false, knowledge:{}});
   // deal
   for(let r=0;r<HAND_SIZE;r++) S.players.forEach(p=>p.hand.push(S.collect.pop()));
-  // flip 3 to discard — Devante flipped at setup burn instead
+  
   let flipped=0;
   while(flipped<3 && S.collect.length){
     const c=S.collect.pop();
