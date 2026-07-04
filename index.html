@@ -127,25 +127,25 @@
   }
   #youShield{display:flex;justify-content:center;gap:6px;padding:0 12px 4px;font-size:12px;color:var(--shield);min-height:16px}
   #hand{
-    display:flex;gap:8px;overflow-x:auto;padding:6px 12px 10px;scrollbar-width:none;
+    display:flex;gap:8px;overflow-x:auto;padding:20px 12px 10px;scrollbar-width:none;
   }
   #hand::-webkit-scrollbar{display:none}
   .card{
     flex:0 0 var(--card-w);width:var(--card-w);height:var(--card-h);
-    border-radius:8px;overflow:hidden;position:relative;border:1.5px solid #3a351f;
+    border-radius:8px;overflow:visible;position:relative;border:1.5px solid #3a351f;
     background:#101008;transition:transform .15s, box-shadow .15s, border-color .15s;
     cursor:pointer;
   }
-  .card img{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}
+  .card img{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none;border-radius:7px}
   .card .ph{
     position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
-    gap:6px;padding:8px;text-align:center;background:linear-gradient(180deg,#26230f,#171509);
+    gap:6px;padding:8px;text-align:center;background:linear-gradient(180deg,#26230f,#171509);border-radius:7px;
   }
   .card .ph .phn{font-family:'Cinzel',serif;font-size:11px;font-weight:700;color:var(--brass);line-height:1.25}
   .card .ph .pht{font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--parchment-dim)}
   .card.sel{transform:translateY(-14px);border-color:var(--brass-hi);box-shadow:0 6px 18px rgba(0,0,0,.6),0 0 12px rgba(232,207,142,.35)}
   .card .tag{
-    position:absolute;bottom:0;left:0;right:0;background:rgba(12,11,6,.82);
+    position:absolute;bottom:0;left:0;right:0;background:rgba(12,11,6,.82);border-radius:0 0 7px 7px;
     font-family:'Cinzel',serif;font-size:8.5px;font-weight:700;letter-spacing:.05em;
     color:var(--parchment);text-align:center;padding:3px 2px;line-height:1.2;
   }
@@ -282,13 +282,16 @@
   #burnPile .pile-card.flash{animation:burnFlash 1s ease}
   /* inspector */
   #inspectImg{width:100%;max-height:62dvh;object-fit:contain;border-radius:12px;display:block;margin:0 auto}
-  /* ability chips floating on character cards */
-  .trait-chips{position:absolute;top:4px;left:0;right:0;display:flex;justify-content:center;gap:3px;z-index:3;pointer-events:none}
-  .tchip{width:19px;height:19px;border-radius:50%;display:flex;align-items:center;justify-content:center;
-    font-size:11px;line-height:1;border:1px solid rgba(201,167,95,.9);box-shadow:0 1px 4px rgba(0,0,0,.7)}
-  .tchip.spell{background:#f6d3da}.tchip.broomstick{background:#efe9cf}
-  .tchip.crystal{background:#d9ecf6}.tchip.potion{background:#e2f2d2}
-  .tchip.x2{background:linear-gradient(#e8cf8e,#b8964f);font-family:'Cinzel',serif;font-weight:900;font-size:9px;color:#3a2f12}
+  /* ability chips: the card art's own medallions, floating above each character card */
+  .trait-chips{position:absolute;top:-13px;left:0;right:0;display:flex;justify-content:center;gap:4px;z-index:4;pointer-events:none}
+  .tchip{width:25px;height:25px;border-radius:7px;background-size:cover;background-position:center;
+    box-shadow:0 2px 6px rgba(0,0,0,.7)}
+  .tchip.spell{background-image:url('cards/icon-spell.png')}
+  .tchip.broomstick{background-image:url('cards/icon-broom.png')}
+  .tchip.crystal{background-image:url('cards/icon-crystal.png')}
+  .tchip.potion{background-image:url('cards/icon-potion.png')}
+  .tchip.x2{background:linear-gradient(#e8cf8e,#b8964f);display:flex;align-items:center;justify-content:center;
+    font-family:'Cinzel',serif;font-weight:900;font-size:10px;color:#3a2f12;border-radius:50%}
   /* fan cards show the real card back */
   .fan-card img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
   .fan-card span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
@@ -460,6 +463,37 @@ let speedIdx = 0; // default Slow — Tommy's request
 /* ---- sound & music (files live in the /music folder; missing files fail silently) ---- */
 let musicOn=true, sfxOn=true, musicEl=null;
 let musicVol=35, sfxVol=70;   // 0–100, adjustable in the audio panel
+/* Web Audio engine: unlocked by the first tap, so sounds play reliably on mobile
+   at any later moment (rival plays, end-game verdicts) — and the music loops gaplessly. */
+let AC=null; const audioBuf={};
+function ensureAC(){
+  try{
+    const Ctx=window.AudioContext||window.webkitAudioContext;
+    if(!AC && Ctx) AC=new Ctx();
+    if(AC && AC.state==="suspended") AC.resume();
+  }catch(e){}
+}
+function getBuf(base){
+  if(base in audioBuf) return Promise.resolve(audioBuf[base]);
+  audioBuf[base]=false;
+  const attempt=async()=>{
+    for(const ext of ["mp3","wav","m4a"]){
+      try{
+        const r=await fetch(`music/${base}.${ext}`); if(!r.ok) continue;
+        const ab=await r.arrayBuffer();
+        const buf=await AC.decodeAudioData(ab);
+        audioBuf[base]=buf; return buf;
+      }catch(e){}
+    }
+    return false;
+  };
+  return attempt();
+}
+function preloadSounds(){
+  if(!AC) return;
+  ["deal","pick","spell","broom","potion","crystal","discard","devante","found",
+   "dragon","dragon-found","scores","victory","defeat","theme"].forEach(n=>getBuf(n));
+}
 function audioTry(el,base){
   const tries=[`music/${base}.mp3`,`music/${base}.wav`,`music/${base}.m4a`]; let k=0;
   el.onerror=()=>{ k++; if(k<tries.length) el.src=tries[k]; };
@@ -467,11 +501,42 @@ function audioTry(el,base){
 }
 function playSfx(name){
   if(!sfxOn||sfxVol<=0) return;
+  ensureAC();
+  if(AC){
+    getBuf(name).then(buf=>{
+      if(!buf) return;
+      try{
+        const src=AC.createBufferSource(); src.buffer=buf;
+        const g=AC.createGain(); g.gain.value=sfxVol/100;
+        src.connect(g); g.connect(AC.destination); src.start();
+      }catch(e){}
+    });
+    return;
+  }
   try{ const a=new Audio(); a.volume=sfxVol/100; audioTry(a,name); a.play().catch(()=>{}); }catch(e){}
 }
+let musicSrc=null, musicGain=null;
 function startMusic(){
-  if(musicEl||!musicOn) return;
+  if(!musicOn) return;
+  ensureAC();
+  if(AC){
+    if(musicSrc) return;
+    getBuf("theme").then(buf=>{
+      if(!buf||musicSrc||!musicOn) return;
+      try{
+        musicSrc=AC.createBufferSource(); musicSrc.buffer=buf; musicSrc.loop=true;  // seamless loop
+        musicGain=AC.createGain(); musicGain.gain.value=musicVol/100;
+        musicSrc.connect(musicGain); musicGain.connect(AC.destination); musicSrc.start();
+      }catch(e){ musicSrc=null; }
+    });
+    return;
+  }
+  if(musicEl) return;
   try{ musicEl=new Audio(); musicEl.loop=true; musicEl.volume=musicVol/100; audioTry(musicEl,"theme"); musicEl.play().catch(()=>{}); }catch(e){}
+}
+function stopMusic(){
+  if(musicSrc){ try{musicSrc.stop();}catch(e){} musicSrc=null; musicGain=null; }
+  if(musicEl) musicEl.pause();
 }
 function updateAvChips(){
   const m=document.getElementById("musicChip"), x=document.getElementById("sfxChip");
@@ -479,8 +544,8 @@ function updateAvChips(){
   if(x) x.classList.toggle("off",!sfxOn);
 }
 function toggleMusic(){ musicOn=!musicOn;
-  if(musicOn){ if(musicEl) musicEl.play().catch(()=>{}); else startMusic(); }
-  else if(musicEl) musicEl.pause();
+  if(musicOn){ if(musicEl){ musicEl.play().catch(()=>{}); } startMusic(); }
+  else stopMusic();
   updateAvChips();
 }
 function toggleSfx(){ sfxOn=!sfxOn; updateAvChips(); }
@@ -503,7 +568,7 @@ function openAudioPanel(){
   };
   box.appendChild(mkRow("🎵 Music", ()=>musicOn, ()=>musicVol,
     ()=>toggleMusic(),
-    v=>{ musicVol=v; if(musicEl) musicEl.volume=musicVol/100; }));
+    v=>{ musicVol=v; if(musicGain) musicGain.gain.value=musicVol/100; if(musicEl) musicEl.volume=musicVol/100; }));
   box.appendChild(mkRow("🔊 Effects", ()=>sfxOn, ()=>sfxVol,
     ()=>toggleSfx(),
     v=>{ sfxVol=v; },
@@ -544,7 +609,7 @@ const OBJECTS = [
   {name:"Dusty Candelabra",  img:"object-dusty-candelabra.jpg"},
 ];
 const ABILITY_COUNTS = {spell:20, crystal:8, broomstick:8, potion:8};
-const DRAGON_COUNT = 1; // Tommy: adjust if the physical deck has more
+const DRAGON_COUNT = 2;
 const OBJECT_COUNT_EACH = 10;   // amended: 10 each, not 13
 const HAND_SIZE = 8;
 const AI_NAMES = ["The Witch","The Wizard","The Warlock"];
@@ -586,7 +651,7 @@ function startGame(nAI){
   }
   $("startScreen").style.display="none";
   $("game").classList.add("on");
-  initBacks(); startMusic();
+  initBacks(); ensureAC(); preloadSounds(); startMusic();
   log("The game begins. Draw a card each turn, then make one play.");
   render();
   dealAnimation().then(()=>beginTurn());
@@ -604,7 +669,7 @@ function initBacks(){
   const holder=document.querySelector("#collectPile .pile-card");
   holder.innerHTML=""; holder.appendChild(cardBackEl());
 }
-function toast(msg,ms=2600){const t=$("toast");t.innerHTML=msg;t.classList.add("on");clearTimeout(t._x);t._x=setTimeout(()=>t.classList.remove("on"),ms);}
+function toast(msg,ms=2600){ if(typeof TUT!=="undefined"&&TUT) ms=Math.max(ms,4500);const t=$("toast");t.innerHTML=msg;t.classList.add("on");clearTimeout(t._x);t._x=setTimeout(()=>t.classList.remove("on"),ms);}
 /* Show which cards were just played, wait so the human can read it. Tap to skip. */
 function showPlay(who,text,cards,ms){
   return new Promise(res=>{
@@ -616,7 +681,9 @@ function showPlay(who,text,cards,ms){
     let done=false;
     const finish=()=>{ if(done)return; done=true; fx.classList.remove("on"); fx.onclick=null; res(); };
     fx.onclick=finish;
-    setTimeout(finish, ms||T("reveal"));
+    let dur=ms||T("reveal");
+    if(TUT) dur=Math.round(dur*1.6);   // first-timers get longer to read
+    setTimeout(finish, dur);
   });
 }
 /* Tries .jpg, .JPG, .jpeg, .JPEG, .png, .PNG so files work whatever the extension case */
@@ -642,8 +709,7 @@ function cardEl(c, mini=false){
   if(c.kind==="devante") d.classList.add("has-shine");
   if(c.kind==="character"){
     const chips=document.createElement("div"); chips.className="trait-chips";
-    const ICON={spell:"🪄",broomstick:"🧹",crystal:"🔮",potion:"🧪"};
-    (c.traits||[]).forEach(t=>{const ch=document.createElement("div");ch.className="tchip "+t;ch.textContent=ICON[t];chips.appendChild(ch);});
+    (c.traits||[]).forEach(t=>{const ch=document.createElement("div");ch.className="tchip "+t;chips.appendChild(ch);});
     if(c.advanced||c.assistant){const x=document.createElement("div");x.className="tchip x2";x.textContent="×2";chips.appendChild(x);}
     d.appendChild(chips);
   }
@@ -883,6 +949,7 @@ async function resolveSpellOnTargets(att,alloc,cardsPlayed,abilityCount){
     log(`<b>${att.name}</b> collects ${drew} card${drew>1?"s":""} — one for each card played.`);
     if(att.human) toast(`+${drew} cards from the Collect pile — one per card you played`);
     await pause(Math.round(T("beat")*0.8));
+    await celebrateFinds(att,drew);
   }
   render();
 }
@@ -936,6 +1003,7 @@ async function resolveCrystalOnTargets(att,alloc,cardsPlayed,abilityCount){
     log(`<b>${att.name}</b> collects ${drew} card${drew>1?"s":""} — one for each card played.`);
     if(att.human) toast(`+${drew} cards from the Collect pile — one per card you played`);
     await pause(Math.round(T("beat")*0.8));
+    await celebrateFinds(att,drew);
   }
   render();
   if(reveals.length) await showRevealedHands(reveals);
@@ -1010,7 +1078,7 @@ function humanDefend(def,att,units,attackType,abilityCount){
       plus.onclick=()=>{v=Math.min(maxB,v+1);num.textContent=v};
       stp.append(minus,num,plus); st.appendChild(stp); box.appendChild(st);
       const b=document.createElement("button");b.className="abtn primary";b.style.width="100%";b.textContent="Counter with broomsticks";
-      b.onclick=()=>{
+      b.onclick=async ()=>{
         const used=brooms.slice(0,v); const chSpent=chars[0];
         removeFromHand(def,[chSpent,...used]); toDiscard([chSpent,...used]);
         const drew=drawCards(def,v);
@@ -1018,7 +1086,9 @@ function humanDefend(def,att,units,attackType,abilityCount){
         playSfx("broom");
         fxSweep(boxOf(def));
         log(`🧹 You counter with ${v} broomstick${v>1?"s":""} and draw ${drew}.`);
-        $("modal").classList.remove("on"); render(); res(units-v);
+        $("modal").classList.remove("on"); render();
+        await celebrateFinds(def,drew);
+        res(units-v);
       };
       box.appendChild(b);
     }
@@ -1031,7 +1101,7 @@ function humanDefend(def,att,units,attackType,abilityCount){
         const drew=drawCards(def,2);
         log(`📕 You burn <b>${d.name}</b> as a broomstick — attack repelled, drew ${drew}.`);
         $("modal").classList.remove("on"); render();
-        showDevanteDrama("You", d, `burn <b>${d.name}</b> — the attack is repelled! (drew ${drew})`).then(()=>res(0));
+        showDevanteDrama("You", d, `burn <b>${d.name}</b> — the attack is repelled! (drew ${drew})`).then(()=>celebrateFinds(def,drew)).then(()=>res(0));
       };
       box.appendChild(b);
     }
@@ -1080,6 +1150,7 @@ async function playDragon(card){
   S.busy=true; render();
   const drew=drawCards(me,4);
   const drawn=me.hand.slice(-drew);
+  if(drawn.some(c=>c.kind==="devante")) playSfx("found");
   log(`🐉 You unleash the <b>Dragon</b> and sweep up ${drew} cards from the Collect pile!`);
   await showPlay("You", `unleash the Dragon — ${drew} cards from the Collect pile`, drawn);
   S.busy=false; render(); endTurn();
@@ -1120,15 +1191,15 @@ function devanteMenu(card){
     const drew=drawCards(me,2);
     log(`📕 You burn <b>${card.name}</b> as a broomstick and draw ${drew}.`);
     $("modal").classList.remove("on");
-    showDevanteDrama("You", card, `sacrifice <b>${card.name}</b> as a Broomstick — draw ${drew}`).then(()=>endTurn());
+    showDevanteDrama("You", card, `sacrifice <b>${card.name}</b> as a Broomstick — draw ${drew}`).then(()=>celebrateFinds(me,drew)).then(()=>endTurn());
   });
-  opt("As Potion — shield (8 hits)",()=>{
+  opt("As Potion — shield (4 hits)",()=>{
     const me=S.players[0];
     if(me.shield){toast("You already have a shield in play.");return;}
     if(me.devUsedTurn){toast("Only one Devante per turn.");return;}
     removeFromHand(me,[card]); me.devUsedTurn=true; S.sel.clear();
-    me.shield={devante:true,card,hitsLeft:8};
-    log(`⛨ You lay <b>${card.name}</b> before you as a shield — it will absorb eight attacks, then burn.`);
+    me.shield={devante:true,card,hitsLeft:4};
+    log(`⛨ You lay <b>${card.name}</b> before you as a shield — it will absorb four attacks, then burn.`);
     $("modal").classList.remove("on");
     showDevanteDrama("You", card, `lay <b>${card.name}</b> before you as a mighty shield`).then(()=>endTurn());
   });
@@ -1284,7 +1355,7 @@ function inspectCard(c){
   const box=$("modalBox");
   let sub="";
   if(c.kind==="character") sub = c.assistant?"Assistant — pairs with a Character to double the effect":(c.advanced?"Advanced ×2 · ":"")+"Abilities: "+c.traits.map(t=>TRAIT_LABEL[t]).join(", ");
-  if(c.kind==="devante") sub = `Devante card · Rank ${c.rank} — steal 8 across rivals, see every hand, repel any attack, shatter all shields, or stand as an 8-hit shield. Burns when played.`;
+  if(c.kind==="devante") sub = `Devante card · Rank ${c.rank} — steal 8 across rivals, see every hand, repel any attack, shatter all shields, or stand as a 4-hit shield. Burns when played.`;
   if(c.kind==="ability") sub = "Ability card — play with a matching Character";
   if(c.kind==="object") sub = "Object card — no powers; discard dross";
   if(c.kind==="dragon") sub = "Dragon — play to the discard pile and draw 4 from the Collect pile";
@@ -1306,39 +1377,81 @@ function showFullLog(){
   const lf=$("logFull");lf.scrollTop=lf.scrollHeight;
 }
 
+/* Any time the human gains cards, check for Devantes and celebrate them */
+async function celebrateFinds(p,drew){
+  if(!p||!p.human||!drew) return;
+  const found=p.hand.slice(-drew).filter(c=>c.kind==="devante");
+  if(!found.length) return;
+  playSfx("found");
+  await showPlay("You", `✨ found ${found.length>1?found.length+" Devante cards":"a <b>Devante card</b>"} among your new cards!`,
+    found, Math.round(T("reveal")*0.95));
+}
+
 /* Opening deal: each of your 8 cards flips from back to face, one by one */
 function dealAnimation(){
   return new Promise(res=>{
     const me=S.players[0];
     const fx=$("dealFx"); fx.classList.add("on");
-    let skip=false;
-    fx.onclick=()=>{ skip=true; };
+    let skip=false; fx.onclick=()=>{ skip=true; };
     const inner=$("dealInner");
-    let i=0;
-    const next=()=>{
-      if(skip || i>=me.hand.length){
-        fx.classList.remove("on"); fx.onclick=null; render();
-        const rivals=S.players.filter(p=>!p.human).map(p=>p.name).join(" and ");
-        log(`${rivals} receive their hands.`);
-        S.players.filter(p=>!p.human).forEach((p,k)=>setTimeout(()=>fxDrawFly(p,3),k*260));
-        setTimeout(res, skip?250:900);
-        return;
-      }
-      const c=me.hand[i];
-      inner.className="flip-inner"; inner.innerHTML="";
-      const front=document.createElement("div"); front.className="flip-face";
-      const fc=cardEl(c); if(c.kind==="devante") fc.classList.add("shimmer");
-      front.appendChild(fc);
-      const back=document.createElement("div"); back.className="flip-face flip-back";
-      back.appendChild(cardBackEl());
-      inner.append(front,back);
-      $("dealCount").textContent=`Card ${i+1} of ${me.hand.length}`;
-      playSfx("deal");
-      requestAnimationFrame(()=>requestAnimationFrame(()=>inner.classList.add("shown")));
-      i++;
-      setTimeout(next, Math.round(T("beat")*0.85));
+    const beat=Math.min(Math.round(T("beat")*0.7), 1000);
+    const finish=()=>{
+      fx.classList.remove("on"); fx.onclick=null; render();
+      const rivals=S.players.filter(p=>!p.human);
+      log(`${rivals.map(p=>p.name).join(" and ")} receive their hands.`);
+      rivals.forEach((p,k)=>setTimeout(()=>fxDrawFly(p,3),k*260));
+      setTimeout(res, skip?200:800);
     };
-    next();
+    let i=0;
+    const step=()=>{
+      if(skip||i>=me.hand.length){ finish(); return; }
+      const c=me.hand[i];
+      const isDev=c.kind==="devante";
+      // 1) a card back flies from the Collect pile to centre stage
+      try{
+        const pr=document.querySelector("#collectPile .pile-card").getBoundingClientRect();
+        const fr=inner.parentElement.getBoundingClientRect();
+        const fly=cardBackEl(); fly.classList.add("fx-card");
+        fly.style.cssText+=`left:${pr.left}px;top:${pr.top}px;width:${pr.width}px;height:${pr.height}px`;
+        document.body.appendChild(fly);
+        requestAnimationFrame(()=>{ fly.style.left=fr.left+"px"; fly.style.top=fr.top+"px";
+          fly.style.width=fr.width+"px"; fly.style.height=fr.height+"px"; });
+        setTimeout(()=>fly.remove(),480);
+      }catch(e){}
+      setTimeout(()=>{
+        if(skip){ finish(); return; }
+        // 2) flip it face-up
+        inner.className="flip-inner"; inner.innerHTML="";
+        const front=document.createElement("div"); front.className="flip-face";
+        const fc=cardEl(c); if(isDev) fc.classList.add("shimmer");
+        front.appendChild(fc);
+        const back=document.createElement("div"); back.className="flip-face flip-back";
+        back.appendChild(cardBackEl());
+        inner.append(front,back);
+        $("dealCount").innerHTML = isDev ? `✨ <b>A Devante — ${c.name}!</b>` : `Card ${i+1} of ${me.hand.length}`;
+        playSfx("deal");
+        if(isDev) playSfx("found");
+        requestAnimationFrame(()=>requestAnimationFrame(()=>inner.classList.add("shown")));
+        // 3) after the hold, it flies down into your hand
+        setTimeout(()=>{
+          if(skip){ finish(); return; }
+          try{
+            const fr=inner.parentElement.getBoundingClientRect();
+            const hr=$("hand").getBoundingClientRect();
+            const fly2=cardBackEl(); fly2.classList.add("fx-card");
+            fly2.style.cssText+=`left:${fr.left}px;top:${fr.top}px;width:${fr.width}px;height:${fr.height}px`;
+            document.body.appendChild(fly2);
+            requestAnimationFrame(()=>{ fly2.style.left=(hr.left+hr.width/2-24)+"px"; fly2.style.top=(hr.top+6)+"px";
+              fly2.style.width="48px"; fly2.style.height="80px"; fly2.style.opacity="0.3"; });
+            setTimeout(()=>fly2.remove(),520);
+          }catch(e){}
+          inner.classList.remove("shown");
+          i++;
+          setTimeout(step, 240);
+        }, isDev ? Math.round(beat*2.1) : beat);
+      }, 430);
+    };
+    step();
   });
 }
 /* card backs fly from the Collect pile to a player's hand — the collect-on-play refund */
@@ -1658,6 +1771,15 @@ function mk(kind,name){
 }
 const TUT_STEPS=[
  {expect:null, text:`Welcome to <b>Devante</b>! The goal: hold the most <b>Devante cards</b> when the game ends. On each turn you draw one card, then make <b>one play</b>. Let's learn every play, one at a time.`},
+ {expect:null,
+  intro:async()=>{
+    await showPlay("Character Cards","make your plays — the floating medallions show which abilities each commands",[mk("character","Mason")]);
+    await showPlay("Ability Cards","power the play — their icon must match the Character's",[mk("ability","spell"),mk("ability","broomstick")]);
+    await showPlay("Assistant Cards","join a Character to double the whole play",[mk("character","Getergrin")]);
+    playSfx("found");
+    await showPlay("Devante Cards","✨ the treasures themselves — hold the most to win",[mk("devante","Aurum")]);
+  },
+  text:`Those are the cards that matter most. Object cards are mere dross for discarding, and the rare <b>Dragon</b> refunds itself fourfold from the Collect pile. Now — let's play.`},
  {expect:"discard", hand:[["object","Dusty Candelabra"],["object","Forgotten Goblet"],["object","Blank Parchment"],["ability","broomstick"]],
   text:`The simplest play: <b>discard one card</b>. Object cards have no powers — they're clutter (and handy chaff for thieves to steal instead of your treasures). Tap the <b>Dusty Candelabra</b>, then tap <b>Discard</b>.`,
   hint:`Tap one Object card, then the Discard button.`,
@@ -1671,6 +1793,10 @@ const TUT_STEPS=[
   hint:`Select Fairy Queen, Getergrin AND the Spell card, then Cast.`,
   done:`One spell, four cards — ×2 for Advanced, ×2 again for the Assistant. And you collected 3 more for the cards you played. Assistants can never be played alone, and only one per play.`},
  {expect:"crystal", hand:[["character","Diamone"],["ability","crystal"],["ability","crystal"],["object","Blank Parchment"]], rivalCount:5, rivalShield:1,
+  intro:async()=>{
+    playSfx("crystal");
+    await showPlay("Diamone","only she commands the Crystal Ball — watch it fly to her side",[mk("character","Diamone"),mk("ability","crystal")]);
+  },
   text:`Spying. Only <b>Diamone</b> can use <b>Crystal Balls</b>. Your Rival has a potion shield (see the green pip) — shields eat your crystal units first, so you need a spare unit to see through. Select Diamone + <b>both</b> Crystal Balls and scry the Rival.`,
   hint:`Select Diamone and both Crystal Ball cards, then Scry.`,
   done:`One ball burst their potion, the second revealed their hand — knowledge is power when choosing whom to rob. With several balls you can view several rivals in one play.`},
@@ -1687,14 +1813,18 @@ const TUT_STEPS=[
   },
   done:`Broomsticks are purely defensive — you can never counter with more broomsticks than the ability cards attacking you, and they're powerless against Devante cards.`},
  {expect:"potion", hand:[["character","Odorf"],["ability","potion"],["ability","potion"],["object","Blank Parchment"]], rivalCount:5,
+  intro:async()=>{
+    playSfx("potion");
+    await showPlay("Odorf","only she brews the Potions — the keeper of shields",[mk("character","Odorf"),mk("ability","potion")]);
+  },
   text:`Standing protection. Only <b>Odorf</b> commands <b>Potions</b>. Select Odorf + both Potions and <b>Set Potion Shield</b> — they sit in front of you, and every future attack must burn through them first. Once set, you can't add more later.`,
   hint:`Select Odorf and both Potion cards, then Set Potion Shield.`,
   done:`Shielded! Each attack unit against you now destroys one potion instead of hurting you. When the last potion pops, Odorf goes to the discard pile along with them — and in this game, the discard pile is never reshuffled, so spent cards are gone for good.`},
  {expect:"devante", hand:[["devante","Corium"],["object","Forgotten Goblet"],["object","Dusty Candelabra"]], rivalCount:5,
-  text:`The treasures themselves. A <b>Devante card</b> needs no Character and wields immense power: as a Spell it steals <b>8 cards, split between rivals as you wish</b>; as a Crystal it reveals <b>every hand</b>; as a Broomstick it repels <b>any</b> attack; as a Potion it stands as an <b>8-hit shield</b>; as a Shield-Breaker it <b>shatters all</b> of a rival's shields at once. But playing one burns it forever — costing you a point. Only a higher-ranked Devante can block one, and <b>Corium ranks 1st</b> — unstoppable. Tap Corium and try it as a Spell.`,
+  text:`The treasures themselves. A <b>Devante card</b> needs no Character and wields immense power: as a Spell it steals <b>8 cards, split between rivals as you wish</b>; as a Crystal it reveals <b>every hand</b>; as a Broomstick it repels <b>any</b> attack; as a Potion it stands as a <b>4-hit shield</b>; as a Shield-Breaker it <b>shatters all</b> of a rival's shields at once. But playing one burns it forever — costing you a point. Only a higher-ranked Devante can block one, and <b>Corium ranks 1st</b> — unstoppable. Tap Corium and try it as a Spell.`,
   hint:`Tap the Corium card, then "Play Devante…".`,
   done:`Powerful — but you burned a treasure to do it. One Devante per turn, whether attacking or blocking. Hoard them, spend them only when it wins you more than it costs.`},
- {expect:null, text:`That's everything! The game ends when the <b>Collect pile empties</b>. Most Devante cards wins; ties go to the highest-ranking Devante held — Corium, rank 1, beats all. You gain Devante cards three ways: your opening hand, <b>drawing them</b> from the Collect pile, and <b>stealing</b> them. Watch for the <b>Dragon card</b> too — play it to the discard pile and sweep up 4 fresh cards. Good luck!`, finale:true},
+ {expect:null, text:`That's everything! The game ends when the <b>Collect pile empties</b>. Most Devante cards wins; ties go to the highest-ranking Devante held — Corium, rank 1, beats all. You gain Devante cards three ways: your opening hand, <b>drawing them</b> from the Collect pile, and <b>stealing</b> them.<br><br>Handy tips: <b>double-tap</b> any card to inspect it up close · the <b>🎵 and 🔊</b> chips open the audio panel · <b>⏱</b> changes the game speed. Good luck!`, finale:true},
 ];
 function startTutorial(){
   S={players:[
@@ -1705,7 +1835,7 @@ function startTutorial(){
   TUT={i:-1};
   $("startScreen").style.display="none";
   $("game").classList.add("on");
-  initBacks(); startMusic();
+  initBacks(); ensureAC(); preloadSounds(); startMusic();
   log("Tutorial — learn at your own pace.");
   tutNext();
 }
@@ -1715,7 +1845,7 @@ function tutPanelShow(text,btnLabel,cb){
   if(btnLabel){const b=document.createElement("button");b.className="abtn primary";b.textContent=btnLabel;b.onclick=cb;h.appendChild(b);}
   $("tutPanel").classList.add("on");
 }
-function tutNext(){
+async function tutNext(){
   TUT.i++;
   const st=TUT_STEPS[TUT.i];
   if(!st){ location.reload(); return; }
@@ -1725,6 +1855,7 @@ function tutNext(){
   rival.shield=st.rivalShield?{charCard:mk("character","Odorf"),charName:"Odorf",devante:false,asst:null,
     potions:Array.from({length:st.rivalShield},()=>({card:mk("ability","potion"),hits:1}))}:null;
   S.sel.clear(); S.busy=false; S.turn=0; render();
+  if(st.intro){ S.busy=true; render(); await st.intro(); S.busy=false; render(); }
   if(st.expect===null) tutPanelShow(st.text, st.finale?"Finish — back to menu":"Continue", ()=>tutNext());
   else { tutPanelShow(st.text); if(st.script) st.script(); }
 }
