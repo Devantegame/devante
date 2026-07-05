@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#16150e">
-<title>Devante — The Spellbook Card Game</title>
+<title>Devante — карточная игра о книгах заклинаний</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=EB+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
 <style>
@@ -367,26 +367,26 @@
 
 <!-- ================= START ================= -->
 <div id="startScreen">
-  <div class="sub">The Spellbook Card Game</div>
+  <div class="sub">Карточная игра о книгах заклинаний</div>
   <h1>DEVANTE</h1>
   <div class="rule-line"></div>
-  <p>Collect the eight Devante cards. Strike with spells, spy with crystal balls, shield with potions — and guard your collection from thieving rivals.</p>
-  <div class="sub" style="letter-spacing:.2em">You face two rivals</div>
+  <p>Соберите восемь карт Деванте. Бейте заклинаниями, подглядывайте хрустальным шаром, защищайтесь зельями — и берегите свою коллекцию от вороватых соперников.</p>
+  <div class="sub" style="letter-spacing:.2em">Против вас — два соперника</div>
   <div class="opp-pick" style="flex-direction:column;align-items:center;gap:10px">
-    <button class="opp-btn" style="width:auto;height:auto;border-radius:32px;padding:16px 34px" onclick="startGame(2)">BEGIN<small>THE GAME</small></button>
-    <button class="opp-btn" style="width:auto;height:auto;border-radius:32px;padding:12px 28px;border-color:var(--teal)" onclick="startTutorial()">TUTORIAL<small>LEARN TO PLAY</small></button>
+    <button class="opp-btn" style="width:auto;height:auto;border-radius:32px;padding:16px 34px" onclick="startGame(2)">НАЧАТЬ<small>ИГРУ</small></button>
+    <button class="opp-btn" style="width:auto;height:auto;border-radius:32px;padding:12px 28px;border-color:var(--teal)" onclick="startTutorial()">ОБУЧЕНИЕ<small>КАК ИГРАТЬ</small></button>
   </div>
   <div class="opp-pick" style="gap:8px">
-    <button class="opp-btn" style="width:auto;height:auto;border-radius:22px;padding:8px 16px;font-size:13px;box-shadow:0 0 14px rgba(201,167,95,.45)">🇬🇧 <small style="display:inline;font-size:11px">English</small></button>
-    <button class="opp-btn" style="width:auto;height:auto;border-radius:22px;padding:8px 16px;font-size:13px" onclick="location.href='ru.html'">🇷🇺 <small style="display:inline;font-size:11px">Русский</small></button>
+    <button class="opp-btn" style="width:auto;height:auto;border-radius:22px;padding:8px 16px;font-size:13px" onclick="location.href='index.html'">🇬🇧 <small style="display:inline;font-size:11px">English</small></button>
+    <button class="opp-btn" style="width:auto;height:auto;border-radius:22px;padding:8px 16px;font-size:13px;box-shadow:0 0 14px rgba(201,167,95,.45)">🇷🇺 <small style="display:inline;font-size:11px">Русский</small></button>
   </div>
-  <div class="sub" style="letter-spacing:.2em;font-size:11px">Game speed</div>
+  <div class="sub" style="letter-spacing:.2em;font-size:11px">Скорость игры</div>
   <div class="opp-pick" id="speedPick">
-    <button class="opp-btn" style="width:64px;height:64px;font-size:11px" onclick="setSpeed(0,this)">Slow</button>
-    <button class="opp-btn" style="width:64px;height:64px;font-size:11px" onclick="setSpeed(1,this)">Normal</button>
-    <button class="opp-btn" style="width:64px;height:64px;font-size:11px" onclick="setSpeed(2,this)">Fast</button>
+    <button class="opp-btn" style="width:64px;height:64px;font-size:11px" onclick="setSpeed(0,this)">Медл.</button>
+    <button class="opp-btn" style="width:64px;height:64px;font-size:11px" onclick="setSpeed(1,this)">Обычн.</button>
+    <button class="opp-btn" style="width:64px;height:64px;font-size:11px" onclick="setSpeed(2,this)">Быстро</button>
   </div>
-  <p style="font-size:13px;opacity:.7">v0.4 playtest build · Quick Variation rules · 3 players</p>
+  <p style="font-size:13px;opacity:.7">тестовая сборка · правила быстрой игры · 3 игрока</p>
 </div>
 
 <!-- ================= GAME ================= -->
@@ -396,20 +396,20 @@
     <div class="pile" id="collectPile">
       <div id="drawArrow">▼<small>DRAW</small></div>
       <div class="pile-card"><div class="card-back"><span>DEVANTE</span></div></div>
-      <div class="plabel">Collect</div><div class="pcount" id="collectCount">0</div>
+      <div class="plabel">Добор</div><div class="pcount" id="collectCount">0</div>
     </div>
     <div class="pile">
       <div id="discardTop"></div>
-      <div class="plabel">Discard</div><div class="pcount" id="discardCount">0</div>
+      <div class="plabel">Сброс</div><div class="pcount" id="discardCount">0</div>
     </div>
     <div class="pile" id="burnPile">
       <div class="pile-card"><div id="burnList"></div></div>
-      <div class="plabel">Burn</div><div class="pcount" id="burnCount">0</div>
+      <div class="plabel">Костёр</div><div class="pcount" id="burnCount">0</div>
     </div>
   </div>
-  <div id="logBar"><span id="musicChip" onclick="openAudioPanel()">🎵</span><span id="sfxChip" onclick="openAudioPanel()">🔊</span><span id="logText" onclick="showFullLog()" style="display:inline-block;padding:0 92px 0 96px">Welcome to Devante.</span><span id="speedChip" onclick="cycleSpeed()">⏱ SLOW</span></div>
+  <div id="logBar"><span id="musicChip" onclick="openAudioPanel()">🎵</span><span id="sfxChip" onclick="openAudioPanel()">🔊</span><span id="logText" onclick="showFullLog()" style="display:inline-block;padding:0 92px 0 96px">Добро пожаловать в «Деванте».</span><span id="speedChip" onclick="cycleSpeed()">⏱ МЕДЛЕННО</span></div>
   <div id="you">
-    <div id="tutPanel"><div class="tt">Tutorial</div><div class="tb" id="tutText"></div><div id="tutBtnHolder"></div></div>
+    <div id="tutPanel"><div class="tt">Обучение</div><div class="tb" id="tutText"></div><div id="tutBtnHolder"></div></div>
     <div id="youShield"></div>
     <div id="actionBar"></div>
     <div id="hand"></div>
@@ -417,16 +417,16 @@
 </div>
 
 <div id="dealFx">
-  <div class="dtitle">Dealing the hands</div>
+  <div class="dtitle">Раздача карт</div>
   <div class="flip"><div class="flip-inner" id="dealInner"></div></div>
   <div class="dcount" id="dealCount"></div>
-  <div class="dskip">tap to skip</div>
+  <div class="dskip">коснитесь, чтобы пропустить</div>
 </div>
 <div id="playFx"><div id="playFxBox">
   <div class="pfw" id="playFxWho"></div>
   <div class="pft" id="playFxText"></div>
   <div id="playFxCards"></div>
-  <div class="pfskip">tap to continue</div>
+  <div class="pfskip">коснитесь, чтобы продолжить</div>
 </div></div>
 <div id="modal"><div id="modalBox"></div></div>
 <div class="toast" id="toast"></div>
@@ -462,7 +462,7 @@ const CHARACTERS = [
 
 /* Pacing — Slow / Normal / Fast, tap the ⏱ chip in-game to change any time */
 const TEMPO = { beat: 1300, reveal: 2600, aiThink: 1500 };
-const SPEEDS = [ {name:"SLOW",mult:1.7}, {name:"NORMAL",mult:1}, {name:"FAST",mult:0.55} ];
+const SPEEDS = [ {name:"МЕДЛЕННО",mult:1.7}, {name:"ОБЫЧНО",mult:1}, {name:"БЫСТРО",mult:0.55} ];
 let speedIdx = 0; // default Slow — Tommy's request
 /* ---- sound & music (files live in the /music folder; missing files fail silently) ---- */
 let musicOn=true, sfxOn=true, musicEl=null;
@@ -556,13 +556,13 @@ function toggleSfx(){ sfxOn=!sfxOn; updateAvChips(); }
 /* Audio panel: on/off + volume for music and sound effects, independently */
 function openAudioPanel(){
   const box=$("modalBox");
-  box.innerHTML=`<h2>Audio</h2><p>Switch each channel on or off, and set its volume.</p>`;
+  box.innerHTML=`<h2>Звук</h2><p>Включайте каждый канал отдельно и настраивайте громкость.</p>`;
   const mkRow=(label,getOn,getVol,onToggle,onVol,preview)=>{
     const row=document.createElement("div"); row.className="vol-row";
     const lb=document.createElement("div"); lb.className="vlabel"; lb.textContent=label;
     const tg=document.createElement("button"); tg.className="abtn"+(getOn()?" primary":"");
-    tg.textContent=getOn()?"ON":"OFF";
-    tg.onclick=()=>{ onToggle(); tg.textContent=getOn()?"ON":"OFF"; tg.className="abtn"+(getOn()?" primary":""); };
+    tg.textContent=getOn()?"ВКЛ":"ВЫКЛ";
+    tg.onclick=()=>{ onToggle(); tg.textContent=getOn()?"ВКЛ":"ВЫКЛ"; tg.className="abtn"+(getOn()?" primary":""); };
     const sl=document.createElement("input"); sl.type="range"; sl.min=0; sl.max=100; sl.value=getVol();
     const pct=document.createElement("div"); pct.className="vpct"; pct.textContent=getVol()+"%";
     sl.oninput=()=>{ onVol(+sl.value); pct.textContent=sl.value+"%"; };
@@ -570,14 +570,14 @@ function openAudioPanel(){
     row.append(lb,tg,sl,pct);
     return row;
   };
-  box.appendChild(mkRow("🎵 Music", ()=>musicOn, ()=>musicVol,
+  box.appendChild(mkRow("🎵 Музыка", ()=>musicOn, ()=>musicVol,
     ()=>toggleMusic(),
     v=>{ musicVol=v; if(musicGain) musicGain.gain.value=musicVol/100; if(musicEl) musicEl.volume=musicVol/100; }));
-  box.appendChild(mkRow("🔊 Effects", ()=>sfxOn, ()=>sfxVol,
+  box.appendChild(mkRow("🔊 Эффекты", ()=>sfxOn, ()=>sfxVol,
     ()=>toggleSfx(),
     v=>{ sfxVol=v; },
     ()=>playSfx("pick")));
-  const b=document.createElement("button"); b.className="abtn primary"; b.style.cssText="width:100%;margin-top:6px"; b.textContent="Done";
+  const b=document.createElement("button"); b.className="abtn primary"; b.style.cssText="width:100%;margin-top:6px"; b.textContent="Готово";
   b.onclick=()=>$("modal").classList.remove("on");
   box.appendChild(b);
   $("modal").classList.add("on");
@@ -588,7 +588,7 @@ function setSpeed(i,btn){ speedIdx=i;
   if(btn) btn.style.boxShadow="0 0 18px rgba(201,167,95,.6)";
   const chip=document.getElementById("speedChip"); if(chip) chip.textContent="⏱ "+SPEEDS[i].name;
 }
-function cycleSpeed(){ setSpeed((speedIdx+1)%SPEEDS.length); toast("Speed: "+SPEEDS[speedIdx].name); }
+function cycleSpeed(){ setSpeed((speedIdx+1)%SPEEDS.length); toast("Скорость: "+SPEEDS[speedIdx].name); }
 
 const DEVANTES = [
   {rank:1,name:"Corium",    img:"devante-1-corium.jpg"},
@@ -616,12 +616,15 @@ const ABILITY_COUNTS = {spell:20, crystal:8, broomstick:8, potion:8};
 const DRAGON_COUNT = 2;
 const OBJECT_COUNT_EACH = 10;   // amended: 10 each, not 13
 const HAND_SIZE = 8;
-const AI_NAMES = ["The Witch","The Wizard","The Warlock"];
-const TRAIT_LABEL = {spell:"Spell", crystal:"Crystal Ball", broomstick:"Broomstick", potion:"Potion"};
+const AI_NAMES = ["Ведьма","Волшебник","Чернокнижник"];
+const TRAIT_LABEL = {spell:"Заклинание", crystal:"Хрустальный шар", broomstick:"Метла", potion:"Зелье"};
 
 /* ---------------- state ---------------- */
 let S = null;
 let uid = 0;
+/* Russian plurals: ruP(1,'карта','карты','карт') */
+function ruP(n,one,few,many){ n=Math.abs(n)%100; const d=n%10;
+  if(n>10&&n<20) return many; if(d>1&&d<5) return few; if(d===1) return one; return many; }
 const $ = id => document.getElementById(id);
 
 function buildDeck(){
@@ -639,7 +642,7 @@ function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random
 function startGame(nAI){
   const deck = shuffle(buildDeck());
   S = {
-    players:[{name:"You", human:true, hand:[], shield:null, devUsedTurn:false}],
+    players:[{name:"Вы", human:true, hand:[], shield:null, devUsedTurn:false}],
     collect:deck, discard:[], burn:[],
     turn:0, log:[], busy:false, sel:new Set(),
   };
@@ -656,7 +659,7 @@ function startGame(nAI){
   $("startScreen").style.display="none";
   $("game").classList.add("on");
   initBacks(); ensureAC(); preloadSounds(); startMusic();
-  log("The game begins. Draw a card each turn, then make one play.");
+  log("Игра начинается. Каждый ход берите карту, затем делайте один ход.");
   render();
   dealAnimation().then(()=>beginTurn());
 }
@@ -707,7 +710,7 @@ function cardEl(c, mini=false){
   const img=document.createElement("img");
   img.alt=c.name;
   smartSrc(img, c.img, ()=>{img.remove(); const ph=document.createElement("div"); ph.className="ph";
-    ph.innerHTML=`<div class="pht">${c.kind}</div><div class="phn">${c.name}</div><div class="pht" style="opacity:.6">art coming soon</div>`;
+    ph.innerHTML=`<div class="pht">карта</div><div class="phn">${c.name}</div><div class="pht" style="opacity:.6">рисунок скоро будет</div>`;
     d.prepend(ph);});
   d.appendChild(img);
   if(c.kind==="devante") d.classList.add("has-shine");
@@ -719,11 +722,11 @@ function cardEl(c, mini=false){
   }
   const tag=document.createElement("div"); tag.className="tag";
   let sub="";
-  if(c.kind==="character") sub = c.assistant?"Assistant ×2":(c.advanced?"Advanced · ":"")+c.traits.map(t=>TRAIT_LABEL[t]).join(" · ");
-  if(c.kind==="devante") sub = `Devante · Rank ${c.rank}`;
-  if(c.kind==="ability") sub = "Ability";
-  if(c.kind==="object") sub = "Object";
-  if(c.kind==="dragon") sub = "Draw 4 when played";
+  if(c.kind==="character") sub = c.assistant?"Помощник ×2":(c.advanced?"Продвинутый · ":"")+c.traits.map(t=>TRAIT_LABEL[t]).join(" · ");
+  if(c.kind==="devante") sub = `Деванте · ранг ${c.rank}`;
+  if(c.kind==="ability") sub = "Способность";
+  if(c.kind==="object") sub = "Предмет";
+  if(c.kind==="dragon") sub = "Сыграйте и возьмите 4 карты";
   tag.innerHTML=`${c.name}<em>${sub}</em>`;
   d.appendChild(tag);
   return d;
@@ -743,7 +746,7 @@ function render(){
                                     : `<span class="shield-pip"></span>`.repeat(p.shield.potions.reduce((n,x)=>n+x.hits,0));
       shieldHTML=`<div>${pips}</div>`;
     }
-    d.innerHTML=`<div class="oname">${p.name}</div><div class="ocount">${p.hand.length}</div><div class="olabel">cards</div>${shieldHTML}`;
+    d.innerHTML=`<div class="oname">${p.name}</div><div class="ocount">${p.hand.length}</div><div class="olabel">карт</div>${shieldHTML}`;
     row.appendChild(d);
   });
   // piles
@@ -760,8 +763,8 @@ function render(){
   const ys=$("youShield"); const me=S.players[0];
   ys.innerHTML = me.shield
     ? (me.shield.devante
-        ? `⛨ Devante shield (${me.shield.card.name}) — ${me.shield.hitsLeft} hit${me.shield.hitsLeft>1?"s":""} left`
-        : `⛨ ${me.shield.charName} guards you — ${me.shield.potions.length} potion${me.shield.potions.length>1?"s":""} (${me.shield.potions.reduce((n,x)=>n+x.hits,0)} hits)`)
+        ? `⛨ Щит-Деванте (${me.shield.card.name}) — прочность: ${me.shield.hitsLeft}`
+        : `⛨ Вас защищает ${me.shield.charName} — зелья: ${me.shield.potions.length} (прочность: ${me.shield.potions.reduce((n,x)=>n+x.hits,0)})`)
     : "";
   // hand — tap to select, double-tap to inspect
   const h=$("hand"); h.innerHTML="";
@@ -800,60 +803,60 @@ function analyseSelection(sel){
 
 function renderActions(){
   const bar=$("actionBar"); bar.innerHTML="";
-  if(S.turn!==0||S.busy){ bar.innerHTML=`<div class="hint">${S.busy?"…":"Waiting for rivals…"}</div>`; return; }
+  if(S.turn!==0||S.busy){ bar.innerHTML=`<div class="hint">${S.busy?"…":"Ход соперников…"}</div>`; return; }
   const sel=selectedCards();
   const a=analyseSelection(sel);
   const mk=(label,cls,fn,dis=false)=>{const b=document.createElement("button");b.className="abtn "+cls;b.textContent=label;b.onclick=fn;b.disabled=dis;bar.appendChild(b);};
 
-  if(sel.length===0){ bar.innerHTML=`<div class="hint">Tap cards to select · double-tap to inspect.</div>`; return; }
+  if(sel.length===0){ bar.innerHTML=`<div class="hint">Коснитесь карт, чтобы выбрать · двойное касание — рассмотреть.</div>`; return; }
 
   // Dragon
   const dragons=sel.filter(c=>c.kind==="dragon");
   if(sel.length===1 && dragons.length===1){
-    mk("Unleash the Dragon — draw 4","primary",()=>playDragon(dragons[0]));
-    mk("Keep (deselect)","",()=>{S.sel.clear();render();});
+    mk("Выпустить Дракона — взять 4 карты","primary",()=>playDragon(dragons[0]));
+    mk("Оставить (снять выбор)","",()=>{S.sel.clear();render();});
     return;
   }
   // Devante single
   if(sel.length===1 && a.devs.length===1){
-    mk("Play Devante…","primary",()=>devanteMenu(a.devs[0]));
-    mk("Keep (deselect)","",()=>{S.sel.clear();render();});
+    mk("Сыграть Деванте…","primary",()=>devanteMenu(a.devs[0]));
+    mk("Оставить (снять выбор)","",()=>{S.sel.clear();render();});
     return;
   }
   // Discard exactly one non-devante card
   if(sel.length===1){
-    mk("Discard","danger",()=>doDiscard(sel[0]));
+    mk("Сбросить","danger",()=>doDiscard(sel[0]));
   }
   // Attack: 1 character (+≤1 assistant) + N same-sub abilities (spell or crystal)
   if(a.chars.length===1 && a.devs.length===0 && a.objs.length===0 && a.assts.length<=1 && a.abils.length>=1 && a.subs.size===1){
     const sub=[...a.subs][0], ch=a.chars[0];
     if(!ch.traits.includes(sub)){
-      bar.innerHTML=`<div class="hint">${ch.name} can’t use ${TRAIT_LABEL[sub]} cards — the traits must match.</div>`;
+      bar.innerHTML=`<div class="hint">${ch.name} не может использовать карты «${TRAIT_LABEL[sub]}» — способности должны совпадать.</div>`;
     } else if(sub==="spell"){
       const units=a.abils.length*multiplier(ch,a.assts[0]||null);
-      mk(`Cast ${a.abils.length} Spell${a.abils.length>1?"s":""} — ${units} steal${units>1?"s":""}`,"primary",()=>spellFlow(ch,a.assts[0]||null,a.abils));
+      mk(`Заклинаний: ${a.abils.length} — украсть карт: ${units}`,"primary",()=>spellFlow(ch,a.assts[0]||null,a.abils));
     } else if(sub==="crystal"){
       const units=a.abils.length*multiplier(ch,a.assts[0]||null);
-      mk(`Scry with ${a.abils.length} Ball${a.abils.length>1?"s":""} — ${units} unit${units>1?"s":""}`,"primary",()=>crystalFlow(ch,a.assts[0]||null,a.abils));
+      mk(`Шаров: ${a.abils.length} — сила: ${units}`,"primary",()=>crystalFlow(ch,a.assts[0]||null,a.abils));
     } else if(sub==="potion"){
-      mk("Set Potion Shield","primary",()=>setShieldHuman(ch,a.assts[0]||null,a.abils));
+      mk("Поставить щит из зелий","primary",()=>setShieldHuman(ch,a.assts[0]||null,a.abils));
     } else if(sub==="broomstick"){
-      bar.innerHTML=`<div class="hint">Broomsticks are defensive — you’ll be offered them automatically when attacked.</div>`;
+      bar.innerHTML=`<div class="hint">Мётлы — для защиты: их предложат автоматически, когда на вас нападут.</div>`;
     }
   }
   // helpful nudges before falling back to the generic message
   if(bar.children.length===0 && a.chars.length===1 && a.abils.length===0 && a.devs.length===0 && a.objs.length===0 && a.assts.length<=1){
     const ch=a.chars[0];
     const opts=ch.traits.map(t=>TRAIT_LABEL[t]).join(" or ");
-    bar.innerHTML=`<div class="hint">${a.assts.length?`${ch.name} + ${a.assts[0].name} ready — now add`:`Now add`} ${ch.name}’s matching ability card${ch.traits.length>1?"s":""} (${opts}) to make the play${a.assts.length?" — the assistant will double it":""}.</div>`;
+    bar.innerHTML=`<div class="hint">${a.assts.length?`${ch.name} + ${a.assts[0].name} готовы — добавьте`:`Добавьте`} подходящие карты способностей (${opts})${a.assts.length?" — помощник удвоит эффект":""}.</div>`;
     return;
   }
   if(bar.children.length===0 && a.assts.length===1 && a.chars.length===0 && a.devs.length===0){
-    bar.innerHTML=`<div class="hint">Assistants can’t act alone — pair ${a.assts[0].name} with a Character and their matching ability cards.</div>`;
+    bar.innerHTML=`<div class="hint">Помощники не действуют в одиночку — сыграйте ${a.assts[0].name} вместе с персонажем и его картами способностей.</div>`;
     return;
   }
   if(bar.children.length===0)
-    bar.innerHTML=`<div class="hint">No valid play with this selection. A play is one card to discard, or a Character + matching Ability cards, or a Devante.</div>`;
+    bar.innerHTML=`<div class="hint">Такой набор сыграть нельзя. Ход — это сброс одной карты, персонаж + подходящие способности, или Деванте.</div>`;
 }
 
 /* ---------------- core mechanics ---------------- */
@@ -876,7 +879,7 @@ function doDiscard(card){
   playSfx("discard");
   fxHandToDiscard([card]);
   removeFromHand(me,[card]); toDiscard([card]); S.sel.clear();
-  log(`You discard <b>${card.name}</b>.${card.kind==="character"?" (No draw — house rule.)":""}`);
+  log(`Вы сбрасываете <b>${card.name}</b>.${card.kind==="character"?" (Без добора — по правилам.)":""}`);
   endTurn();
 }
 
@@ -886,21 +889,21 @@ function absorbWithShield(def,units,attackType){
   const sh=def.shield;
   if(sh.devante){
     while(units>0 && sh.hitsLeft>0){ sh.hitsLeft--; units--; }
-    if(sh.hitsLeft<=0){ toBurn([sh.card]); def.shield=null; log(`${def.name}’s Devante shield shatters and burns.`); }
-    else log(`${def.name}’s Devante shield absorbs the blow (${sh.hitsLeft} hit left).`);
+    if(sh.hitsLeft<=0){ toBurn([sh.card]); def.shield=null; log(`Щит-Деванте ${def.name} разбивается и сгорает.`); }
+    else log(`Щит-Деванте ${def.name} поглощает удар (осталось прочности: ${sh.hitsLeft}).`);
   } else {
     let absorbed=0;
     while(units>0 && sh.potions.length){
       const pot=sh.potions[0];
       pot.hits--; units--; absorbed++;
       if(pot.hits<=0){ toDiscard([pot.card]); sh.potions.shift(); }
-      else log(`${def.name} flips a boosted potion — one hit left on it.`);
+      else log(`${def.name} переворачивает усиленное зелье — оно выдержит ещё один удар.`);
     }
-    if(absorbed) log(`${def.name}’s potions absorb ${absorbed} attack unit${absorbed>1?"s":""}.`);
+    if(absorbed) log(`Зелья ${def.name} поглощают удары: ${absorbed}.`);
     if(sh.potions.length===0){
       const spent=[sh.charCard]; if(sh.asst) spent.push(sh.asst);
       toDiscard(spent); def.shield=null;
-      log(`${sh.charName} retires to the discard pile — ${def.name} is unguarded.`);
+      log(`${sh.charName} уходит в Сброс — ${def.name} без защиты.`);
     }
   }
   return units;
@@ -912,12 +915,12 @@ function spellFlow(ch,asst,spells){
   const units=spells.length*multiplier(ch,asst);
   const targets=S.players.map((p,i)=>({p,i})).filter(x=>x.i!==0);
   allocModal({
-    title:`Cast ${spells.length} spell${spells.length>1?"s":""} with ${ch.name}${asst?" & "+asst.name:""}`,
-    desc:`${units} attack unit${units>1?"s":""} to divide between rivals (advanced/assistant multipliers included). Each unit steals one card.`,
+    title:`Заклинания (${spells.length}) с ${ch.name}${asst?" и "+asst.name:""}`,
+    desc:`Сила атаки: ${units} (множители уже учтены). Разделите между соперниками — каждая единица крадёт одну карту.`,
     targets, max:units,
     onConfirm:(alloc)=>{
       const total=Object.values(alloc).reduce((a,b)=>a+b,0);
-      if(total===0){toast("Assign at least one unit.");return false;}
+      if(total===0){toast("Распределите хотя бы одну единицу.");return false;}
       const played=[ch,...(asst?[asst]:[]),...spells];
       fxHandToDiscard(played);
       removeFromHand(S.players[0],played); toDiscard(played); S.sel.clear();
@@ -931,7 +934,7 @@ async function resolveSpellOnTargets(att,alloc,cardsPlayed,abilityCount){
   for(const [iStr,units] of Object.entries(alloc)){
     if(units<=0)continue;
     const def=S.players[+iStr];
-    log(`⚔️ <b>${att.name}</b> hurls ${units} spell unit${units>1?"s":""} at <b>${def.name}</b>!`);
+    log(`⚔️ <b>${att.name}</b> обрушивает заклинания на <b>${def.name}</b> — сила: ${units}!`);
     playSfx("spell");
     for(let k=0;k<Math.min(units,4);k++) setTimeout(()=>fxBolt(boxOf(att),boxOf(def),"#c9503a"), k*160);
     await pause(T("beat"));
@@ -941,8 +944,8 @@ async function resolveSpellOnTargets(att,alloc,cardsPlayed,abilityCount){
     if(rem>0){
       const stolen=await pickStealCards(att,def,rem);
       att.hand.push(...stolen);
-      const names = (att.human||def.human)? stolen.map(c=>`<b>${c.name}</b>`).join(", ")||"nothing" : `${stolen.length} card${stolen.length!==1?"s":""}`;
-      log(`💰 <b>${att.name}</b> steals ${names} from <b>${def.name}</b>.`);
+      const names = (att.human||def.human)? stolen.map(c=>`<b>${c.name}</b>`).join(", ")||"ничего" : `${stolen.length} ${ruP(stolen.length,"карту","карты","карт")}`;
+      log(`💰 <b>${att.name}</b> крадёт у <b>${def.name}</b>: ${names}.`);
       render(); await pause(T("beat"));
     }
   }
@@ -950,8 +953,8 @@ async function resolveSpellOnTargets(att,alloc,cardsPlayed,abilityCount){
   const drew=drawCards(att,cardsPlayed);
   if(drew){
     fxDrawFly(att,drew);
-    log(`<b>${att.name}</b> collects ${drew} card${drew>1?"s":""} — one for each card played.`);
-    if(att.human) toast(`+${drew} cards from the Collect pile — one per card you played`);
+    log(`<b>${att.name}</b> добирает ${drew} ${ruP(drew,"карту","карты","карт")} — по одной за каждую сыгранную.`);
+    if(att.human) toast(`+${drew} ${ruP(drew,"карта","карты","карт")} из Добора — по одной за каждую сыгранную`);
     await pause(Math.round(T("beat")*0.8));
     await celebrateFinds(att,drew);
   }
@@ -964,12 +967,12 @@ function crystalFlow(ch,asst,balls){
   const units=balls.length*multiplier(ch,asst);
   const targets=S.players.map((p,i)=>({p,i})).filter(x=>x.i!==0);
   allocModal({
-    title:`Scry with ${ch.name}${asst?" & "+asst.name:""}`,
-    desc:`${units} crystal unit${units>1?"s":""}. Assign units to rivals — a rival’s potions eat units first; you need one spare unit left to view their hand.`,
+    title:`Взор шара: ${ch.name}${asst?" и "+asst.name:""}`,
+    desc:`Сила взора: ${units}. Распределите между соперниками — их зелья гасят силу первыми; чтобы увидеть карты, нужна хотя бы одна лишняя единица.`,
     targets, max:units,
     onConfirm:(alloc)=>{
       const total=Object.values(alloc).reduce((a,b)=>a+b,0);
-      if(total===0){toast("Assign at least one unit.");return false;}
+      if(total===0){toast("Распределите хотя бы одну единицу.");return false;}
       const played=[ch,...(asst?[asst]:[]),...balls];
       fxHandToDiscard(played);
       removeFromHand(S.players[0],played); toDiscard(played); S.sel.clear();
@@ -984,19 +987,19 @@ async function resolveCrystalOnTargets(att,alloc,cardsPlayed,abilityCount){
   for(const [iStr,units] of Object.entries(alloc)){
     if(units<=0)continue;
     const def=S.players[+iStr];
-    log(`🔮 <b>${att.name}</b> turns ${units} crystal unit${units>1?"s":""} on <b>${def.name}</b>…`);
+    log(`🔮 <b>${att.name}</b> наводит хрустальный шар на <b>${def.name}</b> — сила: ${units}…`);
     playSfx("crystal");
     for(let k=0;k<Math.min(units,4);k++) setTimeout(()=>fxBolt(boxOf(att),boxOf(def),"#4f8f96"), k*160);
     await pause(T("beat"));
     let rem=absorbWithShield(def,units,"crystal");
     render();
-    if(rem<=0){ log(`${def.name}’s defences cloud the vision.`); await pause(T("beat")); continue; }
+    if(rem<=0){ log(`Защита ${def.name} затуманивает видение.`); await pause(T("beat")); continue; }
     rem=await defendPhase(def,att,rem,"crystal",abilityCount);
     if(rem>0){
       if(att.human) reveals.push(def);
       else {
         att.knowledge[S.players.indexOf(def)] = def.hand.filter(c=>c.kind==="devante").length;
-        log(`👁 <b>${att.name}</b> peers into <b>${def.name}</b>’s hand.`);
+        log(`👁 <b>${att.name}</b> заглядывает в карты <b>${def.name}</b>.`);
         if(def.human) await showBeingScried(att,def);
       }
     }
@@ -1004,8 +1007,8 @@ async function resolveCrystalOnTargets(att,alloc,cardsPlayed,abilityCount){
   const drew=drawCards(att,cardsPlayed);
   if(drew){
     fxDrawFly(att,drew);
-    log(`<b>${att.name}</b> collects ${drew} card${drew>1?"s":""} — one for each card played.`);
-    if(att.human) toast(`+${drew} cards from the Collect pile — one per card you played`);
+    log(`<b>${att.name}</b> добирает ${drew} ${ruP(drew,"карту","карты","карт")} — по одной за каждую сыгранную.`);
+    if(att.human) toast(`+${drew} ${ruP(drew,"карта","карты","карт")} из Добора — по одной за каждую сыгранную`);
     await pause(Math.round(T("beat")*0.8));
     await celebrateFinds(att,drew);
   }
@@ -1016,12 +1019,12 @@ async function resolveCrystalOnTargets(att,alloc,cardsPlayed,abilityCount){
 function showBeingScried(att,def){
   return new Promise(res=>{
     const box=$("modalBox");
-    box.innerHTML=`<h2>👁 ${att.name} is looking…</h2>
-      <p>The crystal clears — your hand lies open before <b>${att.name}</b>.</p>`;
+    box.innerHTML=`<h2>👁 ${att.name} смотрит…</h2>
+      <p>Шар проясняется — ваши карты лежат открытыми перед <b>${att.name}</b>.</p>`;
     const mh=document.createElement("div"); mh.className="mini-hand";
     def.hand.forEach(c=>mh.appendChild(cardEl(c)));
     box.appendChild(mh);
-    const b=document.createElement("button"); b.className="abtn primary"; b.style.width="100%"; b.textContent="Continue";
+    const b=document.createElement("button"); b.className="abtn primary"; b.style.width="100%"; b.textContent="Продолжить";
     let done=false; const finish=()=>{ if(done)return; done=true; $("modal").classList.remove("on"); res(); };
     b.onclick=finish;
     box.appendChild(b);
@@ -1032,15 +1035,15 @@ function showBeingScried(att,def){
 function showRevealedHands(defs){
   return new Promise(res=>{
     const box=$("modalBox");
-    box.innerHTML=`<h2>The crystal clears…</h2>`;
+    box.innerHTML=`<h2>Хрустальный шар проясняется…</h2>`;
     defs.forEach(d=>{
       const w=document.createElement("div"); w.className="revealed-hand";
-      w.innerHTML=`<h3>${d.name}’s hand (${d.hand.length})</h3>`;
+      w.innerHTML=`<h3>Карты ${d.name} (${d.hand.length})</h3>`;
       const mh=document.createElement("div"); mh.className="mini-hand";
       d.hand.forEach(c=>mh.appendChild(cardEl(c)));
       w.appendChild(mh); box.appendChild(w);
     });
-    const b=document.createElement("button");b.className="abtn primary";b.textContent="Done";b.style.width="100%";
+    const b=document.createElement("button");b.className="abtn primary";b.textContent="Готово";b.style.width="100%";
     b.onclick=()=>{$("modal").classList.remove("on");res();};
     box.appendChild(b);
     $("modal").classList.add("on");
@@ -1063,16 +1066,16 @@ function humanDefend(def,att,units,attackType,abilityCount){
     const devs=def.hand.filter(c=>c.kind==="devante");
     const canBroom=chars.length&&brooms.length;
     const canDev=devs.length>0 && !def.devUsedTurn;
-    if(!canBroom&&!canDev){ log(`You cannot defend — brace yourself.`); res(units); return; }
+    if(!canBroom&&!canDev){ log(`Защититься нечем — держитесь.`); res(units); return; }
     const box=$("modalBox");
-    box.innerHTML=`<h2>${att.name} attacks you!</h2>
-      <p>${units} ${attackType==="spell"?"spell":"crystal"} unit${units>1?"s":""} remain after your shields. Counter, or take the hit.</p>`;
+    box.innerHTML=`<h2>${att.name} нападает на вас!</h2>
+      <p>После ваших щитов остаётся сила атаки: ${units} (${attackType==="spell"?"заклинания":"хрустальный шар"}). Отбивайтесь — или примите удар.</p>`;
     if(canBroom){
       // Rulebook: you can never defend with more broomsticks than the ability CARDS attacking you
       const maxB=Math.min(units,brooms.length,abilityCount||units);
-      box.insertAdjacentHTML("beforeend",`<p style="font-size:14px">Sweep away up to <b>${maxB}</b> unit${maxB>1?"s":""} with <b>${chars[0].name}</b> + broomsticks. You draw one card per broomstick used.</p>`);
+      box.insertAdjacentHTML("beforeend",`<p style="font-size:14px">Отметите до <b>${maxB}</b> удар${maxB>1?"ов":"а"} с помощью <b>${chars[0].name}</b> и мётел. За каждую метлу вы берёте карту.</p>`);
       const st=document.createElement("div");st.className="alloc-row";
-      st.innerHTML=`<span class="an">Broomsticks</span>`;
+      st.innerHTML=`<span class="an">Мётлы</span>`;
       const stp=document.createElement("div");stp.className="stepper";
       let v=maxB;
       const minus=document.createElement("button");minus.textContent="−";
@@ -1081,7 +1084,7 @@ function humanDefend(def,att,units,attackType,abilityCount){
       minus.onclick=()=>{v=Math.max(1,v-1);num.textContent=v};
       plus.onclick=()=>{v=Math.min(maxB,v+1);num.textContent=v};
       stp.append(minus,num,plus); st.appendChild(stp); box.appendChild(st);
-      const b=document.createElement("button");b.className="abtn primary";b.style.width="100%";b.textContent="Counter with broomsticks";
+      const b=document.createElement("button");b.className="abtn primary";b.style.width="100%";b.textContent="Отбиться мётлами";
       b.onclick=async ()=>{
         const used=brooms.slice(0,v); const chSpent=chars[0];
         removeFromHand(def,[chSpent,...used]); toDiscard([chSpent,...used]);
@@ -1089,7 +1092,7 @@ function humanDefend(def,att,units,attackType,abilityCount){
         fxDrawFly(def,v);
         playSfx("broom");
         fxSweep(boxOf(def));
-        log(`🧹 You counter with ${v} broomstick${v>1?"s":""} and draw ${drew}.`);
+        log(`🧹 Вы отбиваетесь мётлами (${v}) и берёте ${drew} ${ruP(drew,"карту","карты","карт")}.`);
         $("modal").classList.remove("on"); render();
         await celebrateFinds(def,drew);
         res(units-v);
@@ -1098,19 +1101,19 @@ function humanDefend(def,att,units,attackType,abilityCount){
     }
     if(canDev){
       const b=document.createElement("button");b.className="abtn";b.style.width="100%";b.style.marginTop="8px";
-      b.textContent=`Block everything with a Devante (burns it)`;
+      b.textContent=`Отразить всё картой Деванте (она сгорит)`;
       b.onclick=()=>{
         const d=devs.sort((a,b)=>b.rank-a.rank)[0]; // spend lowest-value (highest rank number)
         removeFromHand(def,[d]); toBurn([d]); def.devUsedTurn=true;
         const drew=drawCards(def,2);
-        log(`📕 You burn <b>${d.name}</b> as a broomstick — attack repelled, drew ${drew}.`);
+        log(`📕 Вы жертвуете <b>${d.name}</b> как метлу — атака отражена, взято карт: ${drew}.`);
         $("modal").classList.remove("on"); render();
-        showDevanteDrama("You", d, `burn <b>${d.name}</b> — the attack is repelled! (drew ${drew})`).then(()=>celebrateFinds(def,drew)).then(()=>res(0));
+        showDevanteDrama("You", d, `жертвуете <b>${d.name}</b> — атака отражена! (+${drew} ${ruP(drew,"карта","карты","карт")})`).then(()=>celebrateFinds(def,drew)).then(()=>res(0));
       };
       box.appendChild(b);
     }
     const skip=document.createElement("button");skip.className="abtn danger";skip.style.width="100%";skip.style.marginTop="8px";
-    skip.textContent="Take the hit";
+    skip.textContent="Принять удар";
     skip.onclick=()=>{$("modal").classList.remove("on");res(units);};
     box.appendChild(skip);
     $("modal").classList.add("on");
@@ -1125,8 +1128,8 @@ async function aiDefend(def,att,units,attackType,abilityCount){
     const d=devs.sort((a,b)=>b.rank-a.rank)[0];
     removeFromHand(def,[d]); toBurn([d]); def.devUsedTurn=true;
     const drew=drawCards(def,2);
-    log(`📕 <b>${def.name}</b> burns <b>${d.name}</b> as a broomstick — attack repelled (drew ${drew}).`);
-    await showDevanteDrama(def.name, d, `burns <b>${d.name}</b> — the attack is repelled!`);
+    log(`📕 <b>${def.name}</b> жертвует <b>${d.name}</b> как метлу — атака отражена (+${drew}).`);
+    await showDevanteDrama(def.name, d, `жертвует <b>${d.name}</b> — атака отражена!`);
     return 0;
   }
   if(chars.length&&brooms.length){
@@ -1137,8 +1140,8 @@ async function aiDefend(def,att,units,attackType,abilityCount){
     fxDrawFly(def,v);
     playSfx("broom");
     fxSweep(boxOf(def));
-    log(`🧹 <b>${def.name}</b> counters with ${v} broomstick${v>1?"s":""} (drew ${drew}).`);
-    await showPlay(def.name, `counters with ${v} broomstick${v>1?"s":""} + ${chars[0].name}`, spent);
+    log(`🧹 <b>${def.name}</b> отбивается мётлами (${v}) и берёт ${drew} ${ruP(drew,"карту","карты","карт")}.`);
+    await showPlay(def.name, `отбивается: мётлы (${v}) + ${chars[0].name}`, spent);
     return units-v;
   }
   return units;
@@ -1155,8 +1158,8 @@ async function playDragon(card){
   const drew=drawCards(me,4);
   const drawn=me.hand.slice(-drew);
   if(drawn.some(c=>c.kind==="devante")) playSfx("found");
-  log(`🐉 You unleash the <b>Dragon</b> and sweep up ${drew} cards from the Collect pile!`);
-  await showPlay("You", `unleash the Dragon — ${drew} cards from the Collect pile`, drawn);
+  log(`🐉 Вы выпускаете <b>Дракона</b> и забираете из Добора ${drew} ${ruP(drew,"карту","карты","карт")}!`);
+  await showPlay("Вы", `выпускаете Дракона — ${drew} ${ruP(drew,"карта","карты","карт")} из Добора`, drawn);
   S.busy=false; render(); endTurn();
 }
 
@@ -1164,7 +1167,7 @@ async function playDragon(card){
 function setShieldHuman(ch,asst,potions){
   if(!tutAllows("potion")) return;
   const me=S.players[0];
-  if(me.shield){toast("You already have a shield in play — you can’t add to it.");return;}
+  if(me.shield){toast("У вас уже стоит щит — добавить к нему нельзя.");return;}
   const played=[ch,...(asst?[asst]:[]),...potions];
   removeFromHand(me,played);
   // Assistant flip rule: boosted potions absorb two hits each (flip, then discard)
@@ -1172,7 +1175,7 @@ function setShieldHuman(ch,asst,potions){
              potions:potions.map(c=>({card:c,hits:asst?2:1})),devante:false,asst:asst||null};
   playSfx("potion");
   S.sel.clear();
-  log(`⛨ You set a shield: <b>${ch.name}</b>${asst?" boosted by <b>"+asst.name+"</b>":""} with ${potions.length} potion${potions.length>1?"s":""}${asst?" (each absorbs two hits)":""}.`);
+  log(`⛨ Вы ставите щит: <b>${ch.name}</b>${asst?" с помощником <b>"+asst.name+"</b>":""} и зелья (${potions.length})${asst?" — каждое выдержит два удара":""}.`);
   endTurn();
 }
 
@@ -1180,56 +1183,56 @@ function setShieldHuman(ch,asst,potions){
 function devanteMenu(card){
   if(!tutAllows("devante")) return;
   const box=$("modalBox");
-  box.innerHTML=`<h2>${card.name} — Rank ${card.rank}</h2>
-    <p>A Devante wields immense power, needing no Character. Playing it reveals it and sends it to the Burn pile — you lose it from your collection.</p>
+  box.innerHTML=`<h2>${card.name} — ранг ${card.rank}</h2>
+    <p>Деванте несёт огромную силу и не требует персонажа. Сыгранная карта открывается и уходит в Костёр — вы теряете её из коллекции.</p>
     <div class="devchoice"></div>`;
   const grid=box.querySelector(".devchoice");
   const opt=(label,fn)=>{const b=document.createElement("button");b.className="abtn";b.textContent=label;b.onclick=fn;grid.appendChild(b);};
-  opt("As Spell — steal 8, split as you wish",()=>{ $("modal").classList.remove("on"); devanteSpell(card); });
-  opt("As Crystal — see every hand",()=>{ $("modal").classList.remove("on"); devanteCrystal(card); });
-  opt("Shield-Breaker — shatter all of a rival's shields",()=>{ $("modal").classList.remove("on"); devanteShatter(card); });
-  opt("As Broomstick — draw 2",()=>{
+  opt("Как заклинание — украсть 8 карт у кого угодно",()=>{ $("modal").classList.remove("on"); devanteSpell(card); });
+  opt("Как шар — увидеть карты всех",()=>{ $("modal").classList.remove("on"); devanteCrystal(card); });
+  opt("Крушитель щитов — разбить все щиты соперника",()=>{ $("modal").classList.remove("on"); devanteShatter(card); });
+  opt("Как метла — взять 2 карты",()=>{
     const me=S.players[0];
-    if(me.devUsedTurn){toast("Only one Devante per turn.");return;}
+    if(me.devUsedTurn){toast("Только одна Деванте за ход.");return;}
     removeFromHand(me,[card]); toBurn([card]); me.devUsedTurn=true; S.sel.clear();
     const drew=drawCards(me,2);
-    log(`📕 You burn <b>${card.name}</b> as a broomstick and draw ${drew}.`);
+    log(`📕 Вы жертвуете <b>${card.name}</b> как метлу и берёте ${drew} ${ruP(drew,"карту","карты","карт")}.`);
     $("modal").classList.remove("on");
-    showDevanteDrama("You", card, `sacrifice <b>${card.name}</b> as a Broomstick — draw ${drew}`).then(()=>celebrateFinds(me,drew)).then(()=>endTurn());
+    showDevanteDrama("You", card, `жертвуете <b>${card.name}</b> как метлу — +${drew} ${ruP(drew,"карта","карты","карт")}`).then(()=>celebrateFinds(me,drew)).then(()=>endTurn());
   });
-  opt("As Potion — shield (4 hits)",()=>{
+  opt("Как зелье — щит (4 удара)",()=>{
     const me=S.players[0];
-    if(me.shield){toast("You already have a shield in play.");return;}
-    if(me.devUsedTurn){toast("Only one Devante per turn.");return;}
+    if(me.shield){toast("У вас уже стоит щит.");return;}
+    if(me.devUsedTurn){toast("Только одна Деванте за ход.");return;}
     removeFromHand(me,[card]); me.devUsedTurn=true; S.sel.clear();
     me.shield={devante:true,card,hitsLeft:4};
-    log(`⛨ You lay <b>${card.name}</b> before you as a shield — it will absorb four attacks, then burn.`);
+    log(`⛨ Вы кладёте <b>${card.name}</b> перед собой как щит — он выдержит четыре удара, затем сгорит.`);
     $("modal").classList.remove("on");
-    showDevanteDrama("You", card, `lay <b>${card.name}</b> before you as a mighty shield`).then(()=>endTurn());
+    showDevanteDrama("You", card, `ставите <b>${card.name}</b> перед собой как могучий щит`).then(()=>endTurn());
   });
   const cancel=document.createElement("button");cancel.className="abtn danger";cancel.style.cssText="width:100%;margin-top:10px";
-  cancel.textContent="Cancel";cancel.onclick=()=>$("modal").classList.remove("on");
+  cancel.textContent="Отмена";cancel.onclick=()=>$("modal").classList.remove("on");
   box.appendChild(cancel);
   $("modal").classList.add("on");
 }
 function devanteSpell(card){
   const me=S.players[0];
-  if(me.devUsedTurn){toast("Only one Devante per turn.");return;}
+  if(me.devUsedTurn){toast("Только одна Деванте за ход.");return;}
   const targets=S.players.map((p,i)=>({p,i})).filter(x=>x.i!==0);
   allocModal({
-    title:`${card.name} as a Spell — 8 steals`,
-    desc:`Divide up to 8 steals between your rivals however you wish. Broomsticks cannot stop a Devante; only a higher-ranking Devante blocks it.`,
+    title:`${card.name} как заклинание — 8 краж`,
+    desc:`Разделите до 8 краж между соперниками как угодно. Мётлы бессильны против Деванте — остановит её только Деванте старшего ранга.`,
     targets, max:8,
     onConfirm:(alloc)=>{
       const total=Object.values(alloc).reduce((a,b)=>a+b,0);
-      if(total===0){toast("Assign at least one steal.");return false;}
+      if(total===0){toast("Назначьте хотя бы одну кражу.");return false;}
       removeFromHand(me,[card]); toBurn([card]); me.devUsedTurn=true; S.sel.clear(); S.busy=true; render();
       (async()=>{
-        await showDevanteDrama("You", card, `unleash <b>${card.name}</b> as a Spell!`);
+        await showDevanteDrama("Вы", card, `обрушиваете <b>${card.name}</b> как заклинание!`);
         for(const [iStr,units] of Object.entries(alloc)){
           if(units<=0) continue;
           const def=S.players[+iStr];
-          log(`📕⚔️ <b>${card.name}</b> strikes at <b>${def.name}</b>!`);
+          log(`📕⚔️ <b>${card.name}</b> бьёт по <b>${def.name}</b>!`);
           for(let k=0;k<Math.min(units,4);k++) setTimeout(()=>fxBolt(boxOf(me),boxOf(def),"#e8a04a"), k*140);
           await pause(T("beat"));
           const blocked=await tryDevanteBlock(def,card);
@@ -1239,7 +1242,7 @@ function devanteSpell(card){
             const stolen=await pickStealCards(me,def,rem);
             me.hand.push(...stolen);
             if(stolen.some(c=>c.kind==="devante")) playSfx("found");
-            log(`💰 You steal ${stolen.map(c=>`<b>${c.name}</b>`).join(", ")||"nothing"} from <b>${def.name}</b>.`);
+            log(`💰 Вы крадёте у <b>${def.name}</b>: ${stolen.map(c=>`<b>${c.name}</b>`).join(", ")||"ничего"}.`);
             render();
           }
         }
@@ -1252,20 +1255,20 @@ function devanteSpell(card){
 /* Shield-Breaker: shatter every shield a rival has, in one blow */
 function devanteShatter(card){
   const me=S.players[0];
-  if(me.devUsedTurn){toast("Only one Devante per turn.");return;}
-  pickOpponent("Shatter whose shields?").then(async ti=>{
+  if(me.devUsedTurn){toast("Только одна Деванте за ход.");return;}
+  pickOpponent("Чьи щиты разбить?").then(async ti=>{
     if(ti==null)return;
     const def=S.players[ti];
     removeFromHand(me,[card]); toBurn([card]); me.devUsedTurn=true; S.sel.clear(); S.busy=true; render();
-    await showDevanteDrama("You", card, `hurl <b>${card.name}</b> at <b>${def.name}</b>'s defences!`);
+    await showDevanteDrama("Вы", card, `обрушиваете <b>${card.name}</b> на защиту <b>${def.name}</b>!`);
     const blocked=await tryDevanteBlock(def,card);
     if(!blocked){
-      if(!def.shield){ log(`<b>${def.name}</b> had no shields — the blow lands on empty air.`); }
+      if(!def.shield){ log(`У <b>${def.name}</b> не было щитов — удар пришёлся в пустоту.`); }
       else if(def.shield.devante){ toBurn([def.shield.card]); def.shield=null;
-        log(`💥 <b>${def.name}</b>'s Devante shield is obliterated!`); }
+        log(`💥 Щит-Деванте <b>${def.name}</b> уничтожен!`); }
       else { const spent=[...def.shield.potions.map(x=>x.card), def.shield.charCard]; if(def.shield.asst) spent.push(def.shield.asst);
         toDiscard(spent); def.shield=null;
-        log(`💥 Every one of <b>${def.name}</b>'s potions shatters — Odorf is swept to the discard pile!`); }
+        log(`💥 Все зелья <b>${def.name}</b> разбиты — Одорф отправляется в Сброс!`); }
       fxBolt(boxOf(me),boxOf(def),"#e8a04a");
     }
     S.busy=false; render(); endTurn();
@@ -1273,11 +1276,11 @@ function devanteShatter(card){
 }
 function devanteCrystal(card){
   const me=S.players[0];
-  if(me.devUsedTurn){toast("Only one Devante per turn.");return;}
+  if(me.devUsedTurn){toast("Только одна Деванте за ход.");return;}
   removeFromHand(me,[card]); toBurn([card]); me.devUsedTurn=true; S.sel.clear(); S.busy=true; render();
-  log(`📕🔮 You unleash <b>${card.name}</b> as a crystal ball — every hand is laid bare.`);
+  log(`📕🔮 Вы обращаете <b>${card.name}</b> в хрустальный шар — все карты как на ладони.`);
   (async()=>{
-    await showDevanteDrama("You", card, `unleash <b>${card.name}</b> — the crystal sees all!`);
+    await showDevanteDrama("Вы", card, `обращаете <b>${card.name}</b> в шар — он видит всё!`);
     await showRevealedHands(S.players.filter((p,i)=>i!==0));
     S.busy=false; endTurn();
   })();
@@ -1290,23 +1293,23 @@ function tryDevanteBlock(def,attackCard){
     if(def.hand.filter(c=>c.kind==="devante").length>=2){
       const b=blockers.sort((a,b)=>b.rank-a.rank)[0];
       removeFromHand(def,[b]); toBurn([b]); def.devUsedTurn=true;
-      log(`🛡 <b>${def.name}</b> blocks with the higher-ranked <b>${b.name}</b>! Both Devante cards burn.`);
-      return showDevanteDrama(def.name, b, `blocks with the higher-ranked <b>${b.name}</b>!`).then(()=>true);
+      log(`🛡 <b>${def.name}</b> отражает атаку старшей картой <b>${b.name}</b>! Обе карты Деванте сгорают.`);
+      return showDevanteDrama(def.name, b, `отражает атаку старшей картой <b>${b.name}</b>!`).then(()=>true);
     }
     return Promise.resolve(false);
   }
   return new Promise(res=>{
     const box=$("modalBox");
-    box.innerHTML=`<h2>Devante attack!</h2><p>${attackCard.name} (rank ${attackCard.rank}) strikes you. You hold a higher-ranked Devante — block it? Both would burn.</p>`;
+    box.innerHTML=`<h2>Атака Деванте!</h2><p>${attackCard.name} (ранг ${attackCard.rank}) бьёт по вам. У вас есть Деванте старшего ранга — отразить? Обе карты сгорят.</p>`;
     const b1=document.createElement("button");b1.className="abtn primary";b1.style.width="100%";
     const blocker=blockers.sort((a,b)=>b.rank-a.rank)[0];
-    b1.textContent=`Block with ${blocker.name} (rank ${blocker.rank})`;
+    b1.textContent=`Отразить картой ${blocker.name} (ранг ${blocker.rank})`;
     b1.onclick=()=>{removeFromHand(def,[blocker]);toBurn([blocker]);def.devUsedTurn=true;
-      log(`🛡 You block with <b>${blocker.name}</b> — both Devante cards burn.`);
+      log(`🛡 Вы отражаете атаку картой <b>${blocker.name}</b> — обе Деванте сгорают.`);
       $("modal").classList.remove("on");render();
-      showDevanteDrama("You", blocker, `block with the higher-ranked <b>${blocker.name}</b>!`).then(()=>res(true));};
+      showDevanteDrama("Вы", blocker, `отражаете атаку старшей картой <b>${blocker.name}</b>!`).then(()=>res(true));};
     const b2=document.createElement("button");b2.className="abtn danger";b2.style.cssText="width:100%;margin-top:8px";
-    b2.textContent="Take the hit";
+    b2.textContent="Принять удар";
     b2.onclick=()=>{$("modal").classList.remove("on");res(false);};
     box.append(b1,b2);$("modal").classList.add("on");
   });
@@ -1315,12 +1318,12 @@ function tryDevanteBlock(def,attackCard){
 /* ---------------- modals ---------------- */
 function allocModal({title,desc,targets,max,onConfirm}){
   const box=$("modalBox");
-  box.innerHTML=`<h2>${title}</h2><p>${desc}</p><p style="font-size:14px">Units left: <b id="unitsLeft">${max}</b></p>`;
+  box.innerHTML=`<h2>${title}</h2><p>${desc}</p><p style="font-size:14px">Осталось распределить: <b id="unitsLeft">${max}</b></p>`;
   const alloc={};
   targets.forEach(({p,i})=>{
     alloc[i]=0;
     const row=document.createElement("div");row.className="alloc-row";
-    row.innerHTML=`<span class="an">${p.name} <small style="color:var(--parchment-dim)">(${p.hand.length} cards${p.shield?", shielded":""})</small></span>`;
+    row.innerHTML=`<span class="an">${p.name} <small style="color:var(--parchment-dim)">(карт: ${p.hand.length}${p.shield?", под щитом":""})</small></span>`;
     const stp=document.createElement("div");stp.className="stepper";
     const minus=document.createElement("button");minus.textContent="−";
     const num=document.createElement("span");num.textContent="0";
@@ -1330,9 +1333,9 @@ function allocModal({title,desc,targets,max,onConfirm}){
     plus.onclick=()=>{if(used()<max){alloc[i]++;num.textContent=alloc[i];$("unitsLeft").textContent=max-used();}};
     stp.append(minus,num,plus);row.appendChild(stp);box.appendChild(row);
   });
-  const go=document.createElement("button");go.className="abtn primary";go.style.cssText="width:100%;margin-top:6px";go.textContent="Confirm";
+  const go=document.createElement("button");go.className="abtn primary";go.style.cssText="width:100%;margin-top:6px";go.textContent="Подтвердить";
   go.onclick=()=>{ if(onConfirm(alloc)!==false) $("modal").classList.remove("on"); };
-  const cancel=document.createElement("button");cancel.className="abtn danger";cancel.style.cssText="width:100%;margin-top:8px";cancel.textContent="Cancel";
+  const cancel=document.createElement("button");cancel.className="abtn danger";cancel.style.cssText="width:100%;margin-top:8px";cancel.textContent="Отмена";
   cancel.onclick=()=>$("modal").classList.remove("on");
   box.append(go,cancel);
   $("modal").classList.add("on");
@@ -1344,11 +1347,11 @@ function pickOpponent(title){
     S.players.forEach((p,i)=>{
       if(i===0)return;
       const b=document.createElement("button");b.className="abtn";b.style.cssText="width:100%;margin-top:8px";
-      b.textContent=`${p.name} — ${p.hand.length} cards${p.shield?" ⛨":""}`;
+      b.textContent=`${p.name} — карт: ${p.hand.length}${p.shield?" ⛨":""}`;
       b.onclick=()=>{$("modal").classList.remove("on");res(i);};
       box.appendChild(b);
     });
-    const c=document.createElement("button");c.className="abtn danger";c.style.cssText="width:100%;margin-top:8px";c.textContent="Cancel";
+    const c=document.createElement("button");c.className="abtn danger";c.style.cssText="width:100%;margin-top:8px";c.textContent="Отмена";
     c.onclick=()=>{$("modal").classList.remove("on");res(null);};
     box.appendChild(c);
     $("modal").classList.add("on");
@@ -1358,24 +1361,24 @@ let lastTap={id:null,t:0};
 function inspectCard(c){
   const box=$("modalBox");
   let sub="";
-  if(c.kind==="character") sub = c.assistant?"Assistant — pairs with a Character to double the effect":(c.advanced?"Advanced ×2 · ":"")+"Abilities: "+c.traits.map(t=>TRAIT_LABEL[t]).join(", ");
-  if(c.kind==="devante") sub = `Devante card · Rank ${c.rank} — steal 8 across rivals, see every hand, repel any attack, shatter all shields, or stand as a 4-hit shield. Burns when played.`;
-  if(c.kind==="ability") sub = "Ability card — play with a matching Character";
-  if(c.kind==="object") sub = "Object card — no powers; discard dross";
-  if(c.kind==="dragon") sub = "Dragon — play to the discard pile and draw 4 from the Collect pile";
+  if(c.kind==="character") sub = c.assistant?"Помощник — играется с персонажем и удваивает эффект":(c.advanced?"Продвинутый ×2 · ":"")+"Способности: "+c.traits.map(t=>TRAIT_LABEL[t]).join(", ");
+  if(c.kind==="devante") sub = `Карта Деванте · ранг ${c.rank} — украсть 8 карт, увидеть все руки, отразить любую атаку, разбить все щиты или встать щитом на 4 удара. Сгорает после игры.`;
+  if(c.kind==="ability") sub = "Карта способности — играется с подходящим персонажем";
+  if(c.kind==="object") sub = "Карта-предмет — без свойств; хлам для сброса";
+  if(c.kind==="dragon") sub = "Дракон — сыграйте в Сброс и возьмите 4 карты из Добора";
   box.innerHTML=`<h2>${c.name}</h2><p>${sub}</p>`;
   const img=document.createElement("img"); img.id="inspectImg"; img.alt=c.name;
   smartSrc(img,c.img,()=>{img.remove();});
   box.appendChild(img);
-  const b=document.createElement("button");b.className="abtn primary";b.style.cssText="width:100%;margin-top:12px";b.textContent="Close";
+  const b=document.createElement("button");b.className="abtn primary";b.style.cssText="width:100%;margin-top:12px";b.textContent="Закрыть";
   b.onclick=()=>$("modal").classList.remove("on");
   box.appendChild(b);
   $("modal").classList.add("on");
 }
 function showFullLog(){
   const box=$("modalBox");
-  box.innerHTML=`<h2>Chronicle</h2><div id="logFull">${S.log.slice(-60).map(l=>`<div>${l}</div>`).join("")}</div>`;
-  const b=document.createElement("button");b.className="abtn primary";b.style.cssText="width:100%;margin-top:10px";b.textContent="Close";
+  box.innerHTML=`<h2>Летопись</h2><div id="logFull">${S.log.slice(-60).map(l=>`<div>${l}</div>`).join("")}</div>`;
+  const b=document.createElement("button");b.className="abtn primary";b.style.cssText="width:100%;margin-top:10px";b.textContent="Закрыть";
   b.onclick=()=>$("modal").classList.remove("on");
   box.appendChild(b);$("modal").classList.add("on");
   const lf=$("logFull");lf.scrollTop=lf.scrollHeight;
@@ -1387,7 +1390,7 @@ async function celebrateFinds(p,drew){
   const found=p.hand.slice(-drew).filter(c=>c.kind==="devante");
   if(!found.length) return;
   playSfx("found");
-  await showPlay("You", `✨ found ${found.length>1?found.length+" Devante cards":"a <b>Devante card</b>"} among your new cards!`,
+  await showPlay("Вы", `✨ среди новых карт — ${found.length>1?"карты Деванте ("+found.length+")":"<b>карта Деванте</b>"}!`,
     found, Math.round(T("reveal")*0.95));
 }
 
@@ -1402,7 +1405,7 @@ function dealAnimation(){
     const finish=()=>{
       fx.classList.remove("on"); fx.onclick=null; render();
       const rivals=S.players.filter(p=>!p.human);
-      log(`${rivals.map(p=>p.name).join(" and ")} receive their hands.`);
+      log(`${rivals.map(p=>p.name).join(" и ")} получают свои карты.`);
       rivals.forEach((p,k)=>setTimeout(()=>fxDrawFly(p,3),k*260));
       setTimeout(res, skip?200:800);
     };
@@ -1432,7 +1435,7 @@ function dealAnimation(){
         const back=document.createElement("div"); back.className="flip-face flip-back";
         back.appendChild(cardBackEl());
         inner.append(front,back);
-        $("dealCount").innerHTML = isDev ? `✨ <b>A Devante — ${c.name}!</b>` : `Card ${i+1} of ${me.hand.length}`;
+        $("dealCount").innerHTML = isDev ? `✨ <b>Деванте — ${c.name}!</b>` : `Карта ${i+1} из ${me.hand.length}`;
         playSfx("deal");
         if(isDev) playSfx("found");
         requestAnimationFrame(()=>requestAnimationFrame(()=>inner.classList.add("shown")));
@@ -1574,8 +1577,8 @@ function fanPickInteractive(def,n){
   return new Promise(res=>{
     const mapping=shuffle([...def.hand]); // the target may shuffle before spells resolve
     const box=$("modalBox");
-    box.innerHTML=`<h2>Choose your plunder</h2>
-      <p><b>${def.name}</b> fans out their hand. Pick <b id="fanLeft">${n}</b> card${n>1?"s":""}.</p>`;
+    box.innerHTML=`<h2>Выбирайте добычу</h2>
+      <p><b>${def.name}</b> раскрывает карты веером. Выберите: <b id="fanLeft">${n}</b>.</p>`;
     const {row,cards}=buildFan(mapping.length);
     box.appendChild(row);
     const stolen=[]; let left=n;
@@ -1601,8 +1604,8 @@ function fanPickWatch(att,def,n){
   return new Promise(res=>{
     const mapping=shuffle([...def.hand]);
     const box=$("modalBox");
-    box.innerHTML=`<h2>${att.name} reaches for your cards…</h2>
-      <p>Your hand is fanned face-down. ${att.name} picks ${n} card${n>1?"s":""}.</p>`;
+    box.innerHTML=`<h2>${att.name} тянется к вашим картам…</h2>
+      <p>Ваша рука раскрыта веером рубашками вверх. ${att.name} выбирает: ${n}.</p>`;
     const {row,cards}=buildFan(mapping.length);
     box.appendChild(row);
     $("modal").classList.add("on");
@@ -1638,7 +1641,7 @@ function humanTapDraw(){
     const pileWrap=$("collectPile");
     const pile=pileWrap.querySelector(".pile-card");
     pileWrap.classList.add("your-draw");
-    log(`Your turn — <b>tap the Collect pile</b> to draw your card.`);
+    log(`Ваш ход — <b>коснитесь колоды Добора</b>, чтобы взять карту.`);
     pile.onclick=async ()=>{
       pile.onclick=null; pileWrap.classList.remove("your-draw");
       const me=S.players[0];
@@ -1650,9 +1653,9 @@ function humanTapDraw(){
         const gotDev=drawn.some(c=>c.kind==="devante");
         if(gotDev) playSfx("found");
         if(drawn.some(c=>c.kind==="dragon")) playSfx("dragon-found");
-        await showPlay("You",
-          gotDev? "✨ You draw a <b>Devante card</b>! Guard it well." :
-          (n===2? "empty-handed — you draw <b>two</b> from the Collect pile" : "draw from the Collect pile"),
+        await showPlay("Вы",
+          gotDev? "✨ Вы вытянули <b>карту Деванте</b>! Берегите её." :
+          (n===2? "рука пуста — вы берёте <b>две</b> карты из Добора" : "берёте карту из Добора"),
           drawn, Math.round(T("reveal")*(gotDev?1.1:0.7)));
       }
       res();
@@ -1663,17 +1666,17 @@ function humanTapDraw(){
 async function beginTurn(){
   const p=S.players[S.turn];
   p.devUsedTurn=false;
-  if(!S.collect.length){ return gameOver("The Collect pile is empty."); }
+  if(!S.collect.length){ return gameOver("Добор опустел."); }
   if(p.human){
     await humanTapDraw();
     render();
-    log(`Your turn — make one play.`);
+    log(`Ваш ход — сделайте один ход.`);
   } else {
     S.busy=true; render();
     const nDraw = p.hand.length===0 ? 2 : 1;
-    log(`<b>${p.name}</b> draws ${nDraw===2?"two cards (empty hand)":"a card"}…`); await pause(Math.round(T("beat")*0.8));
+    log(`<b>${p.name}</b> берёт ${nDraw===2?"две карты (рука пуста)":"карту"}…`); await pause(Math.round(T("beat")*0.8));
     drawCards(p,nDraw); fxDrawFly(p,nDraw); render();
-    log(`<b>${p.name}</b> is thinking…`); await pause(T("aiThink"));
+    log(`<b>${p.name}</b> размышляет…`); await pause(T("aiThink"));
     await aiTurn(p); S.busy=false; endTurn();
   }
 }
@@ -1681,7 +1684,7 @@ function endTurn(){
   if(TUT){ tutActionDone(); return; }
   S.sel.clear();
   render();
-  if(!S.collect.length) return gameOver("The Collect pile is empty.");
+  if(!S.collect.length) return gameOver("Добор опустел.");
   S.turn=(S.turn+1)%S.players.length;
   setTimeout(beginTurn,900);
 }
@@ -1714,8 +1717,8 @@ async function aiTurn(p){
     playSfx("dragon");
     removeFromHand(p,[dragon]); toDiscard([dragon]);
     const drew=drawCards(p,4);
-    log(`🐉 <b>${p.name}</b> unleashes the <b>Dragon</b> and draws ${drew} cards!`);
-    await showPlay(p.name, `unleashes the Dragon — draws ${drew} cards`, [dragon]);
+    log(`🐉 <b>${p.name}</b> выпускает <b>Дракона</b> и берёт ${drew} ${ruP(drew,"карту","карты","карт")}!`);
+    await showPlay(p.name, `выпускает Дракона — берёт ${drew} ${ruP(drew,"карту","карты","карт")}`, [dragon]);
     render(); return;
   }
   // 1. shield up if valuable
@@ -1727,8 +1730,8 @@ async function aiTurn(p){
     p.shield={charCard:potionChar,charName:potionChar.name+(asst?" & "+asst.name:""),
               potions:used.map(c=>({card:c,hits:asst?2:1})),devante:false,asst};
     playSfx("potion");
-    log(`⛨ <b>${p.name}</b> sets a potion shield (${used.length}${asst?", boosted":""}).`);
-    await showPlay(p.name, `sets a potion shield${asst?" boosted by "+asst.name:""}`, played);
+    log(`⛨ <b>${p.name}</b> ставит щит из зелий (${used.length}${asst?", усиленный":""}).`);
+    await showPlay(p.name, `ставит щит из зелий${asst?" с помощником "+asst.name:""}`, played);
     render(); return;
   }
   // 2. spell attack
@@ -1740,7 +1743,7 @@ async function aiTurn(p){
     removeFromHand(p,played); toDiscard(played);
     const alloc={}; alloc[victim.i]=units;
     render();
-    await showPlay(p.name, `attacks <b>${victim.pl.name}</b> — ${use.length} spell${use.length>1?"s":""} with ${spellChar.name}${asst?" & "+asst.name:""} (${units} unit${units>1?"s":""})`, played);
+    await showPlay(p.name, `нападает на <b>${victim.pl.name}</b> — заклинания (${use.length}) с ${spellChar.name}${asst?" и "+asst.name:""}, сила: ${units}`, played);
     await resolveSpellOnTargets(p,alloc,played.length,use.length);
     return;
   }
@@ -1751,7 +1754,7 @@ async function aiTurn(p){
     removeFromHand(p,played); toDiscard(played);
     const alloc={}; alloc[victim.i]=use.length;
     render();
-    await showPlay(p.name, `scries <b>${victim.pl.name}</b> with ${crystalChar.name}`, played);
+    await showPlay(p.name, `наводит шар на <b>${victim.pl.name}</b> с ${crystalChar.name}`, played);
     await resolveCrystalOnTargets(p,alloc,played.length,use.length);
     return;
   }
@@ -1759,10 +1762,10 @@ async function aiTurn(p){
   const junk = hand.find(c=>c.kind==="object") || hand.find(c=>c.kind==="ability"&&c.sub==="broomstick"&&hand.filter(x=>x.sub==="broomstick").length>2)
             || hand.find(c=>c.kind==="ability") || hand.find(c=>c.kind==="character");
   if(junk){ playSfx("discard"); removeFromHand(p,[junk]); toDiscard([junk]);
-    log(`<b>${p.name}</b> discards <b>${junk.name}</b>.`);
-    await showPlay(p.name, `discards a card`, [junk], 1800);
+    log(`<b>${p.name}</b> сбрасывает <b>${junk.name}</b>.`);
+    await showPlay(p.name, `сбрасывает карту`, [junk], 1800);
     render(); return; }
-  log(`<b>${p.name}</b> passes.`); 
+  log(`<b>${p.name}</b> пропускает ход.`); 
 }
 
 /* ---------------- TUTORIAL ---------------- */
@@ -1774,73 +1777,73 @@ function mk(kind,name){
   const t=OBJECTS.find(o=>o.name===name)||OBJECTS[0];return {id:++uid,kind:"object",...t};
 }
 const TUT_STEPS=[
- {expect:null, text:`Welcome to <b>Devante</b>! The goal: hold the most <b>Devante cards</b> when the game ends. On each turn you draw one card, then make <b>one play</b>. Let's learn every play, one at a time.`},
+ {expect:null, text:`Добро пожаловать в «<b>Деванте</b>»! Цель — держать в руке больше всех <b>карт Деванте</b> к концу игры. Каждый ход вы берёте карту, затем делаете <b>один ход</b>. Разберём все ходы по очереди.`},
  {expect:null,
   intro:async()=>{
-    await showPlay("Character Cards","make your plays — the floating medallions show which abilities each commands",[mk("character","Mason")]);
-    await showPlay("Ability Cards","power the play — their icon must match the Character's",[mk("ability","spell"),mk("ability","broomstick")]);
-    await showPlay("Assistant Cards","join a Character to double the whole play",[mk("character","Getergrin")]);
+    await showPlay("Карты персонажей","делают ваши ходы — парящие медальоны показывают их способности",[mk("character","Mason")]);
+    await showPlay("Карты способностей","питают ход силой — их значок должен совпадать со значком персонажа",[mk("ability","spell"),mk("ability","broomstick")]);
+    await showPlay("Помощники","присоединяются к персонажу и удваивают весь ход",[mk("character","Getergrin")]);
     playSfx("found");
-    await showPlay("Devante Cards","✨ the treasures themselves — hold the most to win",[mk("devante","Aurum")]);
+    await showPlay("Карты Деванте","✨ сами сокровища — соберите больше всех, чтобы победить",[mk("devante","Aurum")]);
   },
-  text:`Those are the cards that matter most. Object cards are mere dross for discarding, and the rare <b>Dragon</b> refunds itself fourfold from the Collect pile. Now — let's play.`},
+  text:`Это главные карты игры. Карты-предметы — просто хлам для сброса, а редкий <b>Дракон</b> возвращает себя четырёхкратно из Добора. А теперь — играем.`},
  {expect:"discard", hand:[["object","Dusty Candelabra"],["object","Forgotten Goblet"],["object","Blank Parchment"],["ability","broomstick"]],
-  text:`The simplest play: <b>discard one card</b>. Object cards have no powers — they're clutter (and handy chaff for thieves to steal instead of your treasures). Tap the <b>Dusty Candelabra</b>, then tap <b>Discard</b>.`,
-  hint:`Tap one Object card, then the Discard button.`,
-  done:`That's a whole turn: draw, then one play. Note: discarding earns you nothing — you only collect cards when you play <b>against a rival</b>. That's next.`},
+  text:`Простейший ход: <b>сбросить одну карту</b>. У предметов нет свойств — это хлам (и удобная приманка для воров вместо ваших сокровищ). Коснитесь <b>Dusty Candelabra</b>, затем нажмите <b>Сбросить</b>.`,
+  hint:`Коснитесь карты-предмета, затем кнопки «Сбросить».`,
+  done:`Вот и весь ход: взяли карту — сделали один ход. Заметьте: сброс ничего не приносит. Карты добираются только за ходы <b>против соперника</b>. Это — дальше.`},
  {expect:"spell", hand:[["character","Mason"],["ability","spell"],["object","Forgotten Goblet"]], rivalCount:5,
-  text:`The <b>Spell attack</b>. Ability cards only work with a Character who bears the matching icon. Mason bears the Spell icon — tap <b>Mason</b> and the <b>Spell</b> card, then <b>Cast 1 Spell</b>, and assign it to your Rival. You'll fan out their hand and pick your plunder!`,
-  hint:`Select Mason + the Spell card together, then tap Cast.`,
-  done:`You stole a card — and then drew <b>2 from the Collect pile</b>, one for each card you played (Mason + the Spell). Playing against rivals always refunds you like this. Discarding never does.`},
+  text:`<b>Атака заклинанием</b>. Карты способностей работают только с персонажем, несущим тот же значок. У Mason есть значок заклинания — выберите <b>Mason</b> и карту <b>Заклинание</b>, нажмите кнопку атаки и назначьте её Сопернику. Его карты раскроются веером — выбирайте добычу!`,
+  hint:`Выберите Mason и карту заклинания вместе, затем нажмите атаку.`,
+  done:`Вы украли карту — и затем взяли <b>2 из Добора</b>: по одной за каждую сыгранную карту (Mason + заклинание). Ходы против соперников всегда возмещаются так. Сброс — никогда.`},
  {expect:"spell", hand:[["character","Fairy Queen"],["character","Getergrin"],["ability","spell"],["object","Dusty Candelabra"]], rivalCount:6,
-  text:`Multipliers! The <b>Fairy Queen</b> is <b>Advanced ×2</b>, and <b>Getergrin</b> is an Assistant who doubles it again. Select all three: Fairy Queen + Getergrin + the Spell — one spell card becomes <b>4 steals</b>. With several spells you could even split the units between different rivals.`,
-  hint:`Select Fairy Queen, Getergrin AND the Spell card, then Cast.`,
-  done:`One spell, four cards — ×2 for Advanced, ×2 again for the Assistant. And you collected 3 more for the cards you played. Assistants can never be played alone, and only one per play.`},
+  text:`Множители! <b>Fairy Queen</b> — <b>продвинутый персонаж ×2</b>, а помощник <b>Getergrin</b> удваивает ещё раз. Выберите всех троих: Fairy Queen + Getergrin + заклинание — одна карта превращается в <b>4 кражи</b>. С несколькими заклинаниями кражи можно даже делить между разными соперниками.`,
+  hint:`Выберите Fairy Queen, Getergrin И карту заклинания, затем атакуйте.`,
+  done:`Одно заклинание — четыре карты: ×2 за продвинутого персонажа и ×2 за помощника. И вы добрали ещё 3 за сыгранные карты. Помощники не ходят в одиночку, и только один — за ход.`},
  {expect:"crystal", hand:[["character","Diamone"],["ability","crystal"],["ability","crystal"],["object","Blank Parchment"]], rivalCount:5, rivalShield:1,
   intro:async()=>{
     playSfx("crystal");
-    await showPlay("Diamone","only she commands the Crystal Ball — watch it fly to her side",[mk("character","Diamone"),mk("ability","crystal")]);
+    await showPlay("Diamone","только она владеет хрустальным шаром — смотрите, как он летит к ней",[mk("character","Diamone"),mk("ability","crystal")]);
   },
-  text:`Spying. Only <b>Diamone</b> can use <b>Crystal Balls</b>. Your Rival has a potion shield (see the green pip) — shields eat your crystal units first, so you need a spare unit to see through. Select Diamone + <b>both</b> Crystal Balls and scry the Rival.`,
-  hint:`Select Diamone and both Crystal Ball cards, then Scry.`,
-  done:`One ball burst their potion, the second revealed their hand — knowledge is power when choosing whom to rob. With several balls you can view several rivals in one play.`},
+  text:`Шпионаж. Только <b>Diamone</b> может играть <b>хрустальные шары</b>. У Соперника стоит щит из зелья (зелёная точка) — щиты гасят силу взора первыми, так что нужна лишняя единица, чтобы увидеть карты. Выберите Diamone и <b>оба</b> шара — и наведите взор на Соперника.`,
+  hint:`Выберите Diamone и обе карты хрустального шара.`,
+  done:`Один шар разбил зелье, второй открыл руку соперника — знание решает, кого грабить. С несколькими шарами можно заглянуть к нескольким соперникам за один ход.`},
  {expect:"defend", hand:[["character","Naldy"],["ability","broomstick"],["ability","broomstick"],["object","Forgotten Goblet"],["object","Dusty Candelabra"]], rivalCount:4,
-  text:`Defence! Your Rival is about to attack you with 2 spells. When the prompt appears, counter with <b>Naldy and your Broomsticks</b> — each broomstick sweeps away one incoming unit, and you draw a card for each one used. Defending never costs you your turn.`,
+  text:`Защита! Соперник сейчас нападёт на вас двумя заклинаниями. Когда появится окно, отбейтесь <b>Naldy и мётлами</b> — каждая метла сметает один удар, и за каждую вы берёте карту. Защита не тратит ваш ход.`,
   script:async()=>{
     S.busy=true; render();
     const rival=S.players[1];
     const ch=mk("character","Mason"), s1=mk("ability","spell"), s2=mk("ability","spell");
-    await showPlay(rival.name,"attacks You — 2 spells with Mason",[ch,s1,s2]);
+    await showPlay(rival.name,"нападает на вас — заклинания (2) с Mason",[ch,s1,s2]);
     toDiscard([ch,s1,s2]);
     await resolveSpellOnTargets(rival,{0:2},3,2);
     S.busy=false; tutActionDone();
   },
-  done:`Broomsticks are purely defensive — you can never counter with more broomsticks than the ability cards attacking you, and they're powerless against Devante cards.`},
+  done:`Мётлы — только для защиты: их нельзя сыграть больше, чем карт способностей в атаке, и они бессильны против Деванте.`},
  {expect:"potion", hand:[["character","Odorf"],["ability","potion"],["ability","potion"],["object","Blank Parchment"]], rivalCount:5,
   intro:async()=>{
     playSfx("potion");
-    await showPlay("Odorf","only she brews the Potions — the keeper of shields",[mk("character","Odorf"),mk("ability","potion")]);
+    await showPlay("Odorf","только она варит зелья — хранительница щитов",[mk("character","Odorf"),mk("ability","potion")]);
   },
-  text:`Standing protection. Only <b>Odorf</b> commands <b>Potions</b>. Select Odorf + both Potions and <b>Set Potion Shield</b> — they sit in front of you, and every future attack must burn through them first. Once set, you can't add more later.`,
-  hint:`Select Odorf and both Potion cards, then Set Potion Shield.`,
-  done:`Shielded! Each attack unit against you now destroys one potion instead of hurting you. When the last potion pops, Odorf goes to the discard pile along with them — and in this game, the discard pile is never reshuffled, so spent cards are gone for good.`},
+  text:`Постоянная защита. Только <b>Odorf</b> повелевает <b>зельями</b>. Выберите Odorf и оба зелья и нажмите <b>Поставить щит из зелий</b> — они лягут перед вами, и каждая атака сперва должна прожечь их. Добавить зелья позже нельзя.`,
+  hint:`Выберите Odorf и обе карты зелий, затем поставьте щит.`,
+  done:`Под щитом! Теперь каждый удар уничтожает зелье вместо вас. Когда лопнет последнее, Odorf уйдёт в Сброс вместе с ними — а Сброс в этой игре не перемешивается, ушедшие карты не возвращаются.`},
  {expect:"devante", hand:[["devante","Corium"],["object","Forgotten Goblet"],["object","Dusty Candelabra"]], rivalCount:5,
-  text:`The treasures themselves. A <b>Devante card</b> needs no Character and wields immense power: as a Spell it steals <b>8 cards, split between rivals as you wish</b>; as a Crystal it reveals <b>every hand</b>; as a Broomstick it repels <b>any</b> attack; as a Potion it stands as a <b>4-hit shield</b>; as a Shield-Breaker it <b>shatters all</b> of a rival's shields at once. But playing one burns it forever — costing you a point. Only a higher-ranked Devante can block one, and <b>Corium ranks 1st</b> — unstoppable. Tap Corium and try it as a Spell.`,
-  hint:`Tap the Corium card, then "Play Devante…".`,
-  done:`Powerful — but you burned a treasure to do it. One Devante per turn, whether attacking or blocking. Hoard them, spend them only when it wins you more than it costs.`},
- {expect:null, text:`That's everything! The game ends when the <b>Collect pile empties</b>. Most Devante cards wins; ties go to the highest-ranking Devante held — Corium, rank 1, beats all. You gain Devante cards three ways: your opening hand, <b>drawing them</b> from the Collect pile, and <b>stealing</b> them.<br><br>Handy tips: <b>double-tap</b> any card to inspect it up close · the <b>🎵 and 🔊</b> chips open the audio panel · <b>⏱</b> changes the game speed. Good luck!`, finale:true},
+  text:`Сами сокровища. <b>Карте Деванте</b> не нужен персонаж, и её мощь огромна: как заклинание она крадёт <b>8 карт у кого угодно</b>; как шар — открывает <b>все руки</b>; как метла — отражает <b>любую</b> атаку; как зелье — встаёт <b>щитом на 4 удара</b>; как Крушитель щитов — <b>разбивает все щиты</b> соперника разом. Но сыгранная карта сгорает навсегда — минус очко. Отразить её может лишь Деванте старшего ранга, а <b>Corium — ранг 1</b>, неудержим. Коснитесь Corium и попробуйте его как заклинание.`,
+  hint:`Коснитесь карты Corium, затем «Сыграть Деванте…».`,
+  done:`Могуче — но сокровище сгорело. Одна Деванте за ход, в атаке или защите. Копите их и тратьте лишь тогда, когда выигрыш больше цены.`},
+ {expect:null, text:`Вот и всё! Игра кончается, когда <b>пустеет Добор</b>. Побеждает тот, у кого больше карт Деванте; при ничьей — старший ранг: Corium, ранг 1, бьёт всех. Деванте достаются тремя путями: стартовая рука, <b>добор</b> из колоды и <b>кража</b>.<br><br>Подсказки: <b>двойное касание</b> — рассмотреть карту · значки <b>🎵 и 🔊</b> открывают панель звука · <b>⏱</b> меняет скорость игры. Удачи!`, finale:true},
 ];
 function startTutorial(){
   S={players:[
       {name:"You",human:true,hand:[],shield:null,devUsedTurn:false},
-      {name:"Rival",human:false,hand:[],shield:null,devUsedTurn:false,knowledge:{}}],
+      {name:"Соперник",human:false,hand:[],shield:null,devUsedTurn:false,knowledge:{}}],
      collect:[],discard:[],burn:[],turn:0,log:[],busy:false,sel:new Set()};
   for(let i=0;i<40;i++)S.collect.push(mk("object",OBJECTS[i%3].name));
   TUT={i:-1};
   $("startScreen").style.display="none";
   $("game").classList.add("on");
   initBacks(); ensureAC(); preloadSounds(); startMusic();
-  log("Tutorial — learn at your own pace.");
+  log("Обучение — в вашем собственном темпе.");
   tutNext();
 }
 function tutPanelShow(text,btnLabel,cb){
@@ -1860,18 +1863,18 @@ async function tutNext(){
     potions:Array.from({length:st.rivalShield},()=>({card:mk("ability","potion"),hits:1}))}:null;
   S.sel.clear(); S.busy=false; S.turn=0; render();
   if(st.intro){ S.busy=true; render(); await st.intro(); S.busy=false; render(); }
-  if(st.expect===null) tutPanelShow(st.text, st.finale?"Finish — back to menu":"Continue", ()=>tutNext());
+  if(st.expect===null) tutPanelShow(st.text, st.finale?"Завершить — в меню":"Продолжить", ()=>tutNext());
   else { tutPanelShow(st.text); if(st.script) st.script(); }
 }
 function tutActionDone(){
   const st=TUT_STEPS[TUT.i];
   S.sel.clear(); render();
-  tutPanelShow(st.done||"Well done!", "Continue", ()=>tutNext());
+  tutPanelShow(st.done||"Отлично!", "Продолжить", ()=>tutNext());
 }
 function tutAllows(type){
   if(!TUT) return true;
   const st=TUT_STEPS[TUT.i];
-  if(st.expect!==type){ toast(st.hint||"Follow the lesson instruction above your hand."); return false; }
+  if(st.expect!==type){ toast(st.hint||"Следуйте указанию урока над вашими картами."); return false; }
   return true;
 }
 
@@ -1889,22 +1892,22 @@ async function gameOver(reason){
   const tie = scores.length>1 && scores[1].count===w.count && w.count>0;
   playSfx("scores");
   const box=$("modalBox");
-  box.innerHTML=`<h2>The Collect pile is empty…</h2><p>${reason} Counting the spell books:</p>
+  box.innerHTML=`<h2>Добор опустел…</h2><p>Считаем книги заклинаний:</p>
     <div id="scoreRows"></div><div id="verdict"></div>`;
   $("modal").classList.add("on");
   const rows=$("scoreRows");
   for(const sc of scores){
     const row=document.createElement("div"); row.className="score-row"; row.dataset.name=sc.p.name;
-    row.innerHTML=`<div class="an">${sc.p.name} — <b>${sc.count}</b> Devante${sc.count!==1?"s":""}</div>`;
+    row.innerHTML=`<div class="an">${sc.p.name} — Деванте: <b>${sc.count}</b></div>`;
     const mh=document.createElement("div"); mh.className="mini-hand";
     if(sc.devs.length) sc.devs.sort((a,b)=>a.rank-b.rank).forEach(d=>{const el=cardEl(d); el.classList.add("shimmer"); el.style.cursor="default"; mh.appendChild(el);});
-    else mh.innerHTML=`<span style="color:var(--parchment-dim);font-style:italic;font-size:14px">no Devante cards</span>`;
+    else mh.innerHTML=`<span style="color:var(--parchment-dim);font-style:italic;font-size:14px">нет карт Деванте</span>`;
     row.appendChild(mh); rows.appendChild(row);
     await pause(Math.round(T("reveal")*0.75));
   }
   const burned=S.burn.filter(c=>c.kind==="devante");
   rows.insertAdjacentHTML("beforeend",
-    `<div class="alloc-row" style="border-color:#4a2318"><span class="an" style="color:#d99a83">🔥 Burned</span><span>${burned.length?burned.map(d=>d.name).join(", "):"none"}</span></div>`);
+    `<div class="alloc-row" style="border-color:#4a2318"><span class="an" style="color:#d99a83">🔥 Сожжены</span><span>${burned.length?burned.map(d=>d.name).join(", "):"ни одной"}</span></div>`);
   await pause(T("beat"));
   const vd=$("verdict");
   if(tie){
@@ -1913,10 +1916,10 @@ async function gameOver(reason){
       const sc=scores.find(x=>x.p.name===r.dataset.name);
       if(sc && sc.count===w.count) r.classList.add("tie-pulse");
     });
-    vd.innerHTML=`<div class="tie-banner">A TIE — ${w.count} EACH!</div>`;
+    vd.innerHTML=`<div class="tie-banner">НИЧЬЯ — ПО ${w.count}!</div>`;
     await pause(2200);
     const breaker=w.devs.sort((a,b)=>a.rank-b.rank)[0];
-    vd.innerHTML+=`<p style="text-align:center"><b>${breaker.name}</b>, ranked ${breaker.rank}${breaker.rank===1?"st":breaker.rank===2?"nd":breaker.rank===3?"rd":"th"}, breaks the tie for <b>${w.p.name}</b>!</p>`;
+    vd.innerHTML+=`<p style="text-align:center"><b>${breaker.name}</b> (ранг ${breaker.rank}) решает исход в пользу — <b>${w.p.name}</b>!</p>`;
     const big=cardEl(breaker); big.classList.add("shimmer");
     big.style.cssText+="width:130px;height:226px;margin:6px auto;flex:none;cursor:default;display:block";
     vd.appendChild(big);
@@ -1924,11 +1927,11 @@ async function gameOver(reason){
   }
   const youWin = w.p.human && w.count>0;
   playSfx(youWin?"victory":"defeat");
-  const label = w.count===0 ? "NO VICTOR" : (youWin ? "VICTORY" : "DEFEAT");
+  const label = w.count===0 ? "БЕЗ ПОБЕДИТЕЛЯ" : (youWin ? "ПОБЕДА" : "ПОРАЖЕНИЕ");
   vd.insertAdjacentHTML("beforeend",
     `<div class="verdict-banner ${youWin?"win":"lose"}">${label}</div>
-     <p style="text-align:center">${w.count===0?"No spell books were held when the pile ran dry.":(youWin?"The spell books are yours!":`<b>${w.p.name}</b> claims the spell books.`)}</p>`);
-  const b=document.createElement("button");b.className="abtn primary";b.style.cssText="width:100%;margin-top:10px";b.textContent="Play again";
+     <p style="text-align:center">${w.count===0?"Когда Добор иссяк, книги заклинаний не держал никто.":(youWin?"Книги заклинаний — ваши!":`<b>${w.p.name}</b> забирает книги заклинаний.`)}</p>`);
+  const b=document.createElement("button");b.className="abtn primary";b.style.cssText="width:100%;margin-top:10px";b.textContent="Играть снова";
   b.onclick=()=>location.reload();
   vd.appendChild(b);
 }
