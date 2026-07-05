@@ -278,6 +278,12 @@
   .fx-card{position:fixed;z-index:150;pointer-events:none;transition:all .65s cubic-bezier(.5,.05,.45,1);border-radius:8px;overflow:hidden}
   .fx-bolt{position:fixed;z-index:150;width:20px;height:20px;border-radius:50%;pointer-events:none;
     transition:all .55s cubic-bezier(.4,0,.8,1);filter:blur(1px)}
+  .fx-refund{
+    position:fixed;z-index:150;pointer-events:none;font-family:'Cinzel',serif;font-weight:900;
+    font-size:15px;letter-spacing:.1em;color:var(--brass-hi);
+    text-shadow:0 0 12px rgba(232,207,142,.9),0 2px 4px rgba(0,0,0,.8);
+    transition:all 1.2s ease;white-space:nowrap;
+  }
   .fx-sweep{position:fixed;z-index:150;font-size:42px;pointer-events:none;transition:all .6s ease;text-shadow:0 0 14px rgba(232,207,142,.8)}
   @keyframes burnFlash{0%{box-shadow:0 0 14px rgba(179,64,47,.2) inset,0 0 10px rgba(179,64,47,.2)}
     40%{box-shadow:0 0 44px rgba(255,120,60,.95) inset,0 0 40px rgba(255,110,50,.8)}
@@ -977,13 +983,16 @@ async function resolveSpellOnTargets(att,alloc,cardsPlayed,abilityCount){
     }
   }
   // amended rule: collect-on-play
+  const handBefore=att.hand.length;
   const drew=drawCards(att,cardsPlayed);
+  const drawn=att.hand.slice(handBefore);
   if(drew){
     fxDrawFly(att,drew);
+    fxRefund(att,drew);
     log(`<b>${att.name}</b> добирает ${drew} ${ruP(drew,"карту","карты","карт")} — по одной за каждую сыгранную.`);
-    if(att.human) toast(`+${drew} ${ruP(drew,"карта","карты","карт")} из Добора — по одной за каждую сыгранную`);
+    if(att.human) toast(`Возврат +${drew} — по одной за каждую сыгранную карту`);
     await pause(Math.round(T("beat")*0.8));
-    await celebrateFinds(att,drew);
+    await celebrateFinds(att,drawn);
   }
   render();
 }
@@ -1031,13 +1040,16 @@ async function resolveCrystalOnTargets(att,alloc,cardsPlayed,abilityCount){
       }
     }
   }
+  const handBefore=att.hand.length;
   const drew=drawCards(att,cardsPlayed);
+  const drawn=att.hand.slice(handBefore);
   if(drew){
     fxDrawFly(att,drew);
+    fxRefund(att,drew);
     log(`<b>${att.name}</b> добирает ${drew} ${ruP(drew,"карту","карты","карт")} — по одной за каждую сыгранную.`);
-    if(att.human) toast(`+${drew} ${ruP(drew,"карта","карты","карт")} из Добора — по одной за каждую сыгранную`);
+    if(att.human) toast(`Возврат +${drew} — по одной за каждую сыгранную карту`);
     await pause(Math.round(T("beat")*0.8));
-    await celebrateFinds(att,drew);
+    await celebrateFinds(att,drawn);
   }
   render();
   if(reveals.length) await showRevealedHands(reveals);
@@ -1097,59 +1109,68 @@ function humanDefend(def,att,units,attackType,abilityCount){
     const canDev=devs.length>0 && !def.devUsedTurn;
     if(!canBroom&&!canDev){ log(`Защититься нечем — держитесь.`); res(units); return; }
     const box=$("modalBox");
-    box.innerHTML=`<h2>${att.name} нападает на вас!</h2><p>После ваших щитов остаётся сила атаки: ${units} (${attackType==="spell"?"заклинания":"хрустальный шар"}). Выберите защитников — каждая сыгранная карта возмещается из Добора.</p>`;
+    box.innerHTML=`<h2>${att.name} нападает на вас!</h2><p>После ваших щитов остаётся сила атаки: ${units} (${attackType==="spell"?"заклинания":"хрустальный шар"}). Коснитесь карт, которыми хотите защищаться — каждая сыгранная карта возмещается из Добора.</p>`;
     if(canBroom){
       const maxB=Math.min(units,brooms.length,abilityCount||units);
-      let selChar=0, selAsst=-1, v=maxB;
-      const pickerRow=(label,items,getSel,setSel,allowNone)=>{
-        const row=document.createElement("div"); row.className="alloc-row"; row.style.flexWrap="wrap";
-        row.innerHTML=`<span class="an" style="width:100%;margin-bottom:6px">${label}</span>`;
-        const wrap=document.createElement("div"); wrap.style.cssText="display:flex;gap:6px;flex-wrap:wrap";
-        const btns=[];
-        const paint=()=>btns.forEach((b,k)=>b.className="abtn"+(getSel()===(allowNone?k-1:k)?" primary":""));
-        if(allowNone){ const nb=document.createElement("button"); nb.textContent="Без помощника";
-          nb.onclick=()=>{setSel(-1);paint();refresh();}; btns.push(nb); wrap.appendChild(nb); }
-        items.forEach((it,k)=>{ const b=document.createElement("button"); b.textContent=it.name;
-          b.onclick=()=>{setSel(k);paint();refresh();}; btns.push(b); wrap.appendChild(b); });
-        row.appendChild(wrap); box.appendChild(row); paint();
+      let selChar=0, selAsst=-1;
+      const selBrooms=new Set(brooms.slice(0,maxB).map(c=>c.id));   // preselect up to the cap
+      const cardRow=(label,cards,isSel,onTap)=>{
+        const wrap=document.createElement("div");
+        wrap.innerHTML=`<div class="an" style="font-family:Cinzel,serif;font-size:13px;margin:6px 0 2px">${label}</div>`;
+        const mh=document.createElement("div"); mh.className="mini-hand"; mh.style.paddingTop="16px";
+        cards.forEach((c,k)=>{
+          const el=cardEl(c);
+          if(isSel(c,k)) el.classList.add("sel");
+          el.onclick=()=>{ onTap(c,k); repaint(); refresh(); };
+          mh.appendChild(el);
+        });
+        wrap.appendChild(mh); box.appendChild(wrap);
+        return {mh,cards};
       };
-      pickerRow("Персонаж",chars,()=>selChar,x=>selChar=x,false);
-      if(assts.length) pickerRow("Помощник ×2",assts,()=>selAsst,x=>selAsst=x,true);
-      const st=document.createElement("div");st.className="alloc-row";
-      st.innerHTML=`<span class="an">Мётлы</span>`;
-      const stp=document.createElement("div");stp.className="stepper";
-      const minus=document.createElement("button");minus.textContent="−";
-      const num=document.createElement("span");num.textContent=v;
-      const plus=document.createElement("button");plus.textContent="+";
-      minus.onclick=()=>{v=Math.max(1,v-1);num.textContent=v;refresh();};
-      plus.onclick=()=>{v=Math.min(maxB,v+1);num.textContent=v;refresh();};
-      stp.append(minus,num,plus); st.appendChild(stp); box.appendChild(st);
-      const summary=document.createElement("p"); summary.style.cssText="text-align:center;font-size:14.5px";
+      const rows=[];
+      rows.push(cardRow("Персонаж",chars,(c,k)=>k===selChar,(c,k)=>{selChar=k;}));
+      if(assts.length) rows.push(cardRow("Помощник ×2 — коснитесь, чтобы добавить или убрать",assts,(c,k)=>k===selAsst,(c,k)=>{selAsst=(selAsst===k?-1:k);}));
+      rows.push(cardRow("Мётлы (max ${maxB})",brooms,(c)=>selBrooms.has(c.id),(c)=>{
+        if(selBrooms.has(c.id)) selBrooms.delete(c.id);
+        else if(selBrooms.size<maxB) selBrooms.add(c.id);
+        else toast(`Мётел нельзя сыграть больше, чем карт в атаке.`);
+      }));
+      function repaint(){
+        rows[0].mh.childNodes.forEach((el,k)=>el.classList.toggle("sel",k===selChar));
+        if(assts.length) rows[1].mh.childNodes.forEach((el,k)=>el.classList.toggle("sel",k===selAsst));
+        const bRow=rows[rows.length-1];
+        bRow.mh.childNodes.forEach((el,k)=>el.classList.toggle("sel",selBrooms.has(brooms[k].id)));
+      }
+      const summary=document.createElement("p"); summary.style.cssText="text-align:center;font-size:14.5px;margin-top:8px";
       box.appendChild(summary);
       const go=document.createElement("button"); go.className="abtn primary"; go.style.width="100%";
       box.appendChild(go);
       const calc=()=>{
         const asst=selAsst>=0?assts[selAsst]:null;
-        const mult=multiplier(chars[selChar],asst);
-        const cancel=Math.min(v*mult,units);
+        const v=selBrooms.size;
+        const cancel=Math.min(v*multiplier(chars[selChar],asst),units);
         const spentN=v+1+(asst?1:0);
-        return {asst,cancel,spentN};
+        return {asst,v,cancel,spentN};
       };
       function refresh(){
-        const {asst,cancel,spentN}=calc();
+        const {v,cancel,spentN}=calc();
         summary.innerHTML=`Отобьёт <b>${cancel}</b> из ${units} · вернётся карт: <b>${spentN}</b>`;
-        go.textContent=`Отбиться — отразить ${cancel}`;
+        go.textContent=v? `Отбиться — отразить ${cancel}` : `Выберите хотя бы одну метлу`;
+        go.disabled=!v;
       }
       refresh();
       go.onclick=async ()=>{
-        const {asst,cancel,spentN}=calc();
-        const spent=[chars[selChar],...(asst?[asst]:[]),...brooms.slice(0,v)];
+        const {asst,v,cancel}=calc();
+        if(!v) return;
+        const spent=[chars[selChar],...(asst?[asst]:[]),...brooms.filter(c=>selBrooms.has(c.id))];
         removeFromHand(def,spent); toDiscard(spent);
-        const drew=drawCards(def,spent.length);   // every defence card refunded
+        const drew=drawCards(def,spent.length);
         fxDrawFly(def,drew);
+        fxRefund(def,drew);
+        toast(`Возврат +${drew} из Добора — по одной за каждую карту защиты`);
         playSfx("broom");
         fxSweep(boxOf(def));
-        log(`🧹 Вы отбиваетесь: мётлы (${v})${asst?" + "+asst.name+" ×2":""} + ${chars[selChar].name} — отражено: ${cancel}, добрано: ${drew}.`);
+        log(`🧹 Вы отбиваетесь: мётлы (${v})${asst?" + "+asst.name+" ×2":""} + ${chars[selChar].name} — отражено: ${cancel}, возвращено: ${drew}.`);
         $("modal").classList.remove("on"); render();
         await celebrateFinds(def,drew);
         res(units-cancel);
@@ -1198,6 +1219,7 @@ async function aiDefend(def,att,units,attackType,abilityCount){
     removeFromHand(def,spent); toDiscard(spent);
     const drew=drawCards(def,spent.length);
     fxDrawFly(def,drew);
+    fxRefund(def,drew);
     playSfx("broom");
     fxSweep(boxOf(def));
     log(`🧹 <b>${def.name}</b> отбивается: мётлы (${v})${asst?" + "+asst.name+" ×2":""} — отражено: ${cancel} (добрано: ${drew}).`);
@@ -1216,7 +1238,7 @@ async function playDragon(card){
   removeFromHand(me,[card]); toDiscard([card]); S.sel.clear();
   S.busy=true; render();
   const drew=drawCards(me,4);
-  const drawn=me.hand.slice(-drew);
+  const drawn=me.hand.slice(handBefore);
   if(drawn.some(c=>c.kind==="devante")) playSfx("found");
   log(`🐉 Вы выпускаете <b>Дракона</b> и забираете из Добора ${drew} ${ruP(drew,"карту","карты","карт")}!`);
   await showPlay("Вы", `выпускаете Дракона — ${drew} ${ruP(drew,"карта","карты","карт")} из Добора`, drawn);
@@ -1445,9 +1467,9 @@ function showFullLog(){
 }
 
 /* Any time the human gains cards, check for Devantes and celebrate them */
-async function celebrateFinds(p,drew){
-  if(!p||!p.human||!drew) return;
-  const found=p.hand.slice(-drew).filter(c=>c.kind==="devante");
+async function celebrateFinds(p,drawnCards){
+  if(!p||!p.human||!drawnCards||!drawnCards.length) return;
+  const found=drawnCards.filter(c=>c.kind==="devante");
   if(!found.length) return;
   playSfx("found");
   await showPlay("Вы", `✨ среди новых карт — ${found.length>1?"карты Деванте ("+found.length+")":"<b>карта Деванте</b>"}!`,
@@ -1521,6 +1543,24 @@ function dealAnimation(){
     step();
   });
 }
+/* a glowing REFUND +N tag rises from the Collect pile toward whoever earned it */
+function fxRefund(p,n){
+  try{
+    if(!n) return;
+    const from=centerOf(document.querySelector("#collectPile .pile-card"));
+    const to=centerOf(boxOf(p));
+    const d=document.createElement("div"); d.className="fx-refund";
+    d.textContent="⟲ ВОЗВРАТ +"+n;
+    d.style.cssText+=`left:${from.x-40}px;top:${from.y-14}px;opacity:0`;
+    document.body.appendChild(d);
+    requestAnimationFrame(()=>{ d.style.opacity="1";
+      d.style.left=(from.x+(to.x-from.x)*0.45-40)+"px";
+      d.style.top=(from.y+(to.y-from.y)*0.45-14)+"px"; });
+    setTimeout(()=>{ d.style.opacity="0"; d.style.top=(parseFloat(d.style.top)-26)+"px"; },1000);
+    setTimeout(()=>d.remove(),1600);
+  }catch(e){}
+}
+
 /* card backs fly from the Collect pile to a player's hand — the collect-on-play refund */
 function fxDrawFly(p,n){
   try{
@@ -1669,10 +1709,13 @@ function fanPickWatch(att,def,n){
     const {row,cards}=buildFan(mapping.length);
     box.appendChild(row);
     $("modal").classList.add("on");
+    const worth=c=>c.kind==="devante"?100-(c.rank||0):c.kind==="dragon"?50:c.kind==="character"?(c.assistant?20:30):c.kind==="ability"?10:1;
     const stolen=[]; let k=0;
     const pickOne=()=>{
       const avail=cards.map((el,i)=>({el,i})).filter(x=>!x.el.classList.contains("flipped"));
-      const pick=avail[Math.floor(Math.random()*avail.length)];
+      // a real rival reaches for your best — Devantes first, then characters, then the rest
+      avail.sort((a,b)=>worth(mapping[b.i])-worth(mapping[a.i]));
+      const pick=avail[0];
       pick.el.classList.add("aipick");
       setTimeout(()=>{
         const card=mapping[pick.i];
