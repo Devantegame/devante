@@ -336,6 +336,12 @@
   .vol-row .vpct{width:44px;text-align:right;font-size:14px;color:var(--parchment-dim)}
   .vol-row .abtn{padding:7px 13px;font-size:11px}
   /* audio chips */
+  #menuChip{
+    position:fixed;top:calc(env(safe-area-inset-top) + 8px);left:8px;z-index:20;display:none;
+    font-size:17px;border:1.5px solid var(--bronze);border-radius:18px;padding:6px 13px;background:#221f12;cursor:pointer;
+    box-shadow:0 1px 6px rgba(0,0,0,.5);
+  }
+  #game.on ~ #menuChip, body.playing #menuChip{display:block}
   #musicChip,#sfxChip{
     position:absolute;top:50%;transform:translateY(-50%);
     font-size:17px;border:1.5px solid var(--bronze);border-radius:18px;padding:6px 13px;background:#221f12;cursor:pointer;
@@ -478,20 +484,20 @@ function ensureAC(){
   }catch(e){}
 }
 function getBuf(base){
-  if(base in audioBuf) return Promise.resolve(audioBuf[base]);
-  audioBuf[base]=false;
-  const attempt=async()=>{
-    for(const ext of ["mp3","wav","m4a"]){
-      try{
-        const r=await fetch(`music/${base}.${ext}`); if(!r.ok) continue;
-        const ab=await r.arrayBuffer();
-        const buf=await AC.decodeAudioData(ab);
-        audioBuf[base]=buf; return buf;
-      }catch(e){}
-    }
-    return false;
-  };
-  return attempt();
+  // cache the loading PROMISE, so early callers wait for the download instead of giving up
+  if(!(base in audioBuf)){
+    audioBuf[base]=(async()=>{
+      for(const ext of ["mp3","wav","m4a"]){
+        try{
+          const r=await fetch(`music/${base}.${ext}`); if(!r.ok) continue;
+          const ab=await r.arrayBuffer();
+          return await AC.decodeAudioData(ab);
+        }catch(e){}
+      }
+      return false;
+    })();
+  }
+  return audioBuf[base];
 }
 function preloadSounds(){
   if(!AC) return;
@@ -554,6 +560,18 @@ function toggleMusic(){ musicOn=!musicOn;
 }
 function toggleSfx(){ sfxOn=!sfxOn; updateAvChips(); }
 /* Audio panel: on/off + volume for music and sound effects, independently */
+function confirmMenu(){
+  const box=$("modalBox");
+  box.innerHTML=`<h2>Вернуться в главное меню?</h2><p>Текущая игра будет потеряна — отменить это нельзя.</p>`;
+  const stay=document.createElement("button"); stay.className="abtn primary"; stay.style.cssText="width:100%";
+  stay.textContent="Продолжить игру";
+  stay.onclick=()=>$("modal").classList.remove("on");
+  const leave=document.createElement("button"); leave.className="abtn danger"; leave.style.cssText="width:100%;margin-top:8px";
+  leave.textContent="Да, выйти в меню";
+  leave.onclick=()=>location.reload();
+  box.append(stay,leave);
+  $("modal").classList.add("on");
+}
 function openAudioPanel(){
   const box=$("modalBox");
   box.innerHTML=`<h2>Звук</h2><p>Включайте каждый канал отдельно и настраивайте громкость.</p>`;
@@ -659,6 +677,7 @@ function startGame(nAI){
   $("startScreen").style.display="none";
   $("game").classList.add("on");
   initBacks(); ensureAC(); preloadSounds(); startMusic();
+  document.body.classList.add("playing");
   log("Игра начинается. Каждый ход берите карту, затем делайте один ход.");
   render();
   dealAnimation().then(()=>beginTurn());
@@ -1843,6 +1862,7 @@ function startTutorial(){
   $("startScreen").style.display="none";
   $("game").classList.add("on");
   initBacks(); ensureAC(); preloadSounds(); startMusic();
+  document.body.classList.add("playing");
   log("Обучение — в вашем собственном темпе.");
   tutNext();
 }
@@ -1936,5 +1956,6 @@ async function gameOver(reason){
   vd.appendChild(b);
 }
 </script>
+<span id="menuChip" onclick="confirmMenu()">🏠</span>
 </body>
 </html>
