@@ -26,6 +26,7 @@
     --card-h:154px;
   }
   *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
   html,body{height:100%}
   body{
     font-family:'EB Garamond',Georgia,serif;
@@ -35,7 +36,7 @@
       var(--ink);
     color:var(--parchment);
     display:flex;flex-direction:column;
-    height:100dvh;overflow:hidden;
+    height:100vh;height:100dvh;overflow:hidden;
     user-select:none;-webkit-user-select:none;
   }
   h1,h2,h3,.display{font-family:'Cinzel',serif;letter-spacing:.06em}
@@ -43,7 +44,7 @@
   /* ============ START SCREEN ============ */
   #startScreen{
     position:fixed;inset:0;z-index:100;display:flex;flex-direction:column;
-    align-items:center;justify-content:center;gap:22px;padding:24px;text-align:center;
+    align-items:center;justify-content:center;gap:18px;padding:24px;text-align:center;overflow-y:auto;
     background:
       radial-gradient(ellipse 90% 60% at 50% 30%, #2b2917 0%, transparent 65%),
       var(--ink);
@@ -87,11 +88,11 @@
   .targetable{outline:2px solid var(--ember);outline-offset:2px;cursor:pointer;animation:pulse 1.2s infinite}
   @keyframes pulse{0%,100%{outline-color:rgba(179,64,47,.9)}50%{outline-color:rgba(179,64,47,.3)}}
 
-  #tableMid{flex:1;display:flex;align-items:center;justify-content:center;gap:18px;min-height:0;padding:4px 10px}
+  #tableMid{flex:1;display:flex;align-items:center;justify-content:center;gap:clamp(8px,4vw,18px);min-height:0;padding:4px 10px}
   .pile{display:flex;flex-direction:column;align-items:center;gap:5px}
   .pile .plabel{font-family:'Cinzel',serif;font-size:10px;letter-spacing:.22em;color:var(--bronze);text-transform:uppercase}
   .pile-card{
-    width:74px;height:118px;border-radius:9px;position:relative;
+    width:clamp(56px,17vw,74px);aspect-ratio:74/118;height:auto;border-radius:9px;position:relative;
     display:flex;align-items:center;justify-content:center;
   }
   .card-back{
@@ -104,7 +105,7 @@
   .card-back::before{content:"";position:absolute;inset:5px;border:1px solid rgba(201,167,95,.4);border-radius:6px}
   .card-back span{font-family:'Cinzel',serif;font-weight:900;font-size:9px;letter-spacing:.18em;color:var(--brass);transform:rotate(-90deg)}
   .pile .pcount{font-size:14px;color:var(--parchment-dim)}
-  #discardTop{width:74px;height:118px;border-radius:9px;overflow:hidden;border:1px solid #3a351f;background:#101008}
+  #discardTop{width:clamp(56px,17vw,74px);aspect-ratio:74/118;height:auto;border-radius:9px;overflow:hidden;border:1px solid #3a351f;background:#101008}
   #discardTop img{width:100%;height:100%;object-fit:cover}
   #burnPile .pile-card{
     border:1.5px solid #4a2318;border-radius:9px;
@@ -224,7 +225,7 @@
   #playFxBox .pfskip{font-size:12px;color:var(--bronze);margin-top:10px;letter-spacing:.12em;text-transform:uppercase}
   .card-back img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:7px}
   /* fan picker for stealing cards */
-  #fanRow{display:flex;justify-content:center;padding:18px 0 8px;min-height:150px}
+  #fanRow{display:flex;justify-content:center;flex-wrap:wrap;row-gap:28px;padding:18px 0 8px;min-height:150px}
   .fan-card{
     width:80px;height:138px;border-radius:8px;margin-left:-34px;position:relative;
     border:1.5px solid var(--bronze);overflow:hidden;background:#101008;
@@ -237,18 +238,19 @@
   .fan-card.aipick{outline:2px solid var(--ember)}
   /* speed chip */
   #speedChip{
-    position:absolute;right:8px;top:50%;transform:translateY(-50%);
-    font-family:'Cinzel',serif;font-size:12px;font-weight:700;letter-spacing:.1em;color:var(--brass);
-    border:1.5px solid var(--bronze);border-radius:18px;padding:8px 13px;background:#221f12;cursor:pointer;
-    box-shadow:0 1px 6px rgba(0,0,0,.5);
+    flex:0 0 auto;
+    font-family:'Cinzel',serif;font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--brass);
+    border:1.5px solid var(--bronze);border-radius:18px;padding:8px 11px;background:#221f12;cursor:pointer;
+    box-shadow:0 1px 6px rgba(0,0,0,.5);white-space:nowrap;
   }
-  #logBar{position:relative;min-height:44px;display:flex;align-items:center;justify-content:center}
+  #logBar{display:flex;align-items:center;gap:6px;padding:4px 8px;min-height:44px}
+  #logText{flex:1;min-width:0;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   /* tutorial */
   #tutPanel{
     display:none;margin:0 12px 8px;border:1.5px solid var(--teal);border-radius:12px;
     background:linear-gradient(180deg,#1b2422,#141a18);padding:12px 14px;
   }
-  #tutPanel.on{display:block}
+  #tutPanel.on{display:block;max-height:32dvh;overflow-y:auto}
   #tutPanel .tt{font-family:'Cinzel',serif;font-size:12px;font-weight:700;letter-spacing:.16em;color:var(--teal);text-transform:uppercase;margin-bottom:4px}
   #tutPanel .tb{font-size:15.5px;line-height:1.45;color:var(--parchment)}
   #tutPanel .abtn{margin-top:10px}
@@ -343,11 +345,10 @@
   }
   #game.on ~ #menuChip, body.playing #menuChip{display:block}
   #musicChip,#sfxChip{
-    position:absolute;top:50%;transform:translateY(-50%);
-    font-size:17px;border:1.5px solid var(--bronze);border-radius:18px;padding:6px 13px;background:#221f12;cursor:pointer;
+    flex:0 0 auto;
+    font-size:17px;border:1.5px solid var(--bronze);border-radius:18px;padding:6px 11px;background:#221f12;cursor:pointer;
     box-shadow:0 1px 6px rgba(0,0,0,.5);
   }
-  #musicChip{left:8px} #sfxChip{left:66px}
   #musicChip.off,#sfxChip.off{opacity:.32;border-color:#3a351f}
   .toast{
     position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:120;
@@ -356,6 +357,11 @@
     max-width:90vw;text-align:center;
   }
   .toast.on{opacity:1}
+  @media (max-height:660px){
+    :root{--card-w:74px;--card-h:130px}
+    #hand{padding-top:16px}
+    .pile .plabel{font-size:9px}
+  }
   @media (min-width:700px){
     :root{--card-w:104px;--card-h:182px}
     #hand{justify-content:center}
@@ -413,7 +419,7 @@
       <div class="plabel">Burn</div><div class="pcount" id="burnCount">0</div>
     </div>
   </div>
-  <div id="logBar"><span id="musicChip" onclick="openAudioPanel()"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#c9a75f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></span><span id="sfxChip" onclick="openAudioPanel()"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#c9a75f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block"><path d="M11 5 6 9H3v6h3l5 4z" fill="#c9a75f" stroke="none"/><path d="M15.5 8.7a4.5 4.5 0 0 1 0 6.6"/><path d="M18.6 5.6a9 9 0 0 1 0 12.8"/></svg></span><span id="logText" onclick="showFullLog()" style="display:inline-block;padding:0 92px 0 96px">Welcome to Devante.</span><span id="speedChip" onclick="cycleSpeed()">⏱ SLOW</span></div>
+  <div id="logBar"><span id="musicChip" onclick="openAudioPanel()"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#c9a75f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></span><span id="sfxChip" onclick="openAudioPanel()"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#c9a75f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block"><path d="M11 5 6 9H3v6h3l5 4z" fill="#c9a75f" stroke="none"/><path d="M15.5 8.7a4.5 4.5 0 0 1 0 6.6"/><path d="M18.6 5.6a9 9 0 0 1 0 12.8"/></svg></span><span id="logText" onclick="showFullLog()">Welcome to Devante.</span><span id="speedChip" onclick="cycleSpeed()">⏱ SLOW</span></div>
   <div id="you">
     <div id="tutPanel"><div class="tt">Tutorial</div><div class="tb" id="tutText"></div><div id="tutBtnHolder"></div></div>
     <div id="youShield"></div>
