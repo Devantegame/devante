@@ -413,7 +413,7 @@
       <div class="plabel">Burn</div><div class="pcount" id="burnCount">0</div>
     </div>
   </div>
-  <div id="logBar"><span id="musicChip" onclick="openAudioPanel()">🎵</span><span id="sfxChip" onclick="openAudioPanel()">🔊</span><span id="logText" onclick="showFullLog()" style="display:inline-block;padding:0 92px 0 96px">Welcome to Devante.</span><span id="speedChip" onclick="cycleSpeed()">⏱ SLOW</span></div>
+  <div id="logBar"><span id="musicChip" onclick="openAudioPanel()"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#c9a75f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></span><span id="sfxChip" onclick="openAudioPanel()"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#c9a75f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block"><path d="M11 5 6 9H3v6h3l5 4z" fill="#c9a75f" stroke="none"/><path d="M15.5 8.7a4.5 4.5 0 0 1 0 6.6"/><path d="M18.6 5.6a9 9 0 0 1 0 12.8"/></svg></span><span id="logText" onclick="showFullLog()" style="display:inline-block;padding:0 92px 0 96px">Welcome to Devante.</span><span id="speedChip" onclick="cycleSpeed()">⏱ SLOW</span></div>
   <div id="you">
     <div id="tutPanel"><div class="tt">Tutorial</div><div class="tb" id="tutText"></div><div id="tutBtnHolder"></div></div>
     <div id="youShield"></div>
@@ -588,10 +588,10 @@ function openAudioPanel(){
     row.append(lb,tg,sl,pct);
     return row;
   };
-  box.appendChild(mkRow("🎵 Music", ()=>musicOn, ()=>musicVol,
+  box.appendChild(mkRow("Music", ()=>musicOn, ()=>musicVol,
     ()=>toggleMusic(),
     v=>{ musicVol=v; if(musicGain) musicGain.gain.value=musicVol/100; if(musicEl) musicEl.volume=musicVol/100; }));
-  box.appendChild(mkRow("🔊 Effects", ()=>sfxOn, ()=>sfxVol,
+  box.appendChild(mkRow("Effects", ()=>sfxOn, ()=>sfxVol,
     ()=>toggleSfx(),
     v=>{ sfxVol=v; },
     ()=>playSfx("pick")));
@@ -704,9 +704,8 @@ function showPlay(who,text,cards,ms){
     let done=false;
     const finish=()=>{ if(done)return; done=true; fx.classList.remove("on"); fx.onclick=null; res(); };
     fx.onclick=finish;
-    let dur=ms||T("reveal");
-    if(TUT) dur=Math.round(dur*1.6);   // first-timers get longer to read
-    setTimeout(finish, dur);
+    if(TUT){ /* tutorial: banners wait for a tap — nothing skips past a first-timer */ }
+    else setTimeout(finish, ms||T("reveal"));
   });
 }
 /* Tries .jpg, .JPG, .jpeg, .JPEG, .png, .PNG so files work whatever the extension case */
@@ -1089,7 +1088,7 @@ function humanDefend(def,att,units,attackType,abilityCount){
     if(canBroom){
       // Rulebook: you can never defend with more broomsticks than the ability CARDS attacking you
       const maxB=Math.min(units,brooms.length,abilityCount||units);
-      box.insertAdjacentHTML("beforeend",`<p style="font-size:14px">Sweep away up to <b>${maxB}</b> unit${maxB>1?"s":""} with <b>${chars[0].name}</b> + broomsticks. You draw one card per broomstick used.</p>`);
+      box.insertAdjacentHTML("beforeend",`<p style="font-size:14px">Sweep away up to <b>${maxB}</b> unit${maxB>1?"s":""} with <b>${chars[0].name}</b> + broomsticks. Every card you use in defence is refunded from the Collect pile — the character included.</p>`);
       const st=document.createElement("div");st.className="alloc-row";
       st.innerHTML=`<span class="an">Broomsticks</span>`;
       const stp=document.createElement("div");stp.className="stepper";
@@ -1103,12 +1102,13 @@ function humanDefend(def,att,units,attackType,abilityCount){
       const b=document.createElement("button");b.className="abtn primary";b.style.width="100%";b.textContent="Counter with broomsticks";
       b.onclick=async ()=>{
         const used=brooms.slice(0,v); const chSpent=chars[0];
-        removeFromHand(def,[chSpent,...used]); toDiscard([chSpent,...used]);
-        const drew=drawCards(def,v);
-        fxDrawFly(def,v);
+        const spent=[chSpent,...used];
+        removeFromHand(def,spent); toDiscard(spent);
+        const drew=drawCards(def,spent.length);   // refund EVERY card used in defence, character included
+        fxDrawFly(def,drew);
         playSfx("broom");
         fxSweep(boxOf(def));
-        log(`🧹 You counter with ${v} broomstick${v>1?"s":""} and draw ${drew}.`);
+        log(`🧹 You counter with ${v} broomstick${v>1?"s":""} + ${chSpent.name} and collect ${drew} back.`);
         $("modal").classList.remove("on"); render();
         await celebrateFinds(def,drew);
         res(units-v);
@@ -1152,11 +1152,11 @@ async function aiDefend(def,att,units,attackType,abilityCount){
     const v=Math.min(units,brooms.length,abilityCount||units);
     const spent=[chars[0],...brooms.slice(0,v)];
     removeFromHand(def,spent); toDiscard(spent);
-    const drew=drawCards(def,v);
-    fxDrawFly(def,v);
+    const drew=drawCards(def,spent.length);   // refund EVERY card used in defence, character included
+    fxDrawFly(def,drew);
     playSfx("broom");
     fxSweep(boxOf(def));
-    log(`🧹 <b>${def.name}</b> counters with ${v} broomstick${v>1?"s":""} (drew ${drew}).`);
+    log(`🧹 <b>${def.name}</b> counters with ${v} broomstick${v>1?"s":""} (collected ${drew} back).`);
     await showPlay(def.name, `counters with ${v} broomstick${v>1?"s":""} + ${chars[0].name}`, spent);
     return units-v;
   }
@@ -1824,7 +1824,7 @@ const TUT_STEPS=[
   hint:`Select Diamone and both Crystal Ball cards, then Scry.`,
   done:`One ball burst their potion, the second revealed their hand — knowledge is power when choosing whom to rob. With several balls you can view several rivals in one play.`},
  {expect:"defend", hand:[["character","Naldy"],["ability","broomstick"],["ability","broomstick"],["object","Forgotten Goblet"],["object","Dusty Candelabra"]], rivalCount:4,
-  text:`Defence! Your Rival is about to attack you with 2 spells. When the prompt appears, counter with <b>Naldy and your Broomsticks</b> — each broomstick sweeps away one incoming unit, and you draw a card for each one used. Defending never costs you your turn.`,
+  text:`Defence! Your Rival is about to attack you with 2 spells. When the prompt appears, counter with <b>Naldy and your Broomsticks</b> — each broomstick sweeps away one incoming unit, and every card you play in defence (Naldy included) is refunded from the Collect pile. Defending never costs you your turn.`,
   script:async()=>{
     S.busy=true; render();
     const rival=S.players[1];
@@ -1847,7 +1847,7 @@ const TUT_STEPS=[
   text:`The treasures themselves. A <b>Devante card</b> needs no Character and wields immense power: as a Spell it steals <b>8 cards, split between rivals as you wish</b>; as a Crystal it reveals <b>every hand</b>; as a Broomstick it repels <b>any</b> attack; as a Potion it stands as a <b>4-hit shield</b>; as a Shield-Breaker it <b>shatters all</b> of a rival's shields at once. But playing one burns it forever — costing you a point. Only a higher-ranked Devante can block one, and <b>Corium ranks 1st</b> — unstoppable. Tap Corium and try it as a Spell.`,
   hint:`Tap the Corium card, then "Play Devante…".`,
   done:`Powerful — but you burned a treasure to do it. One Devante per turn, whether attacking or blocking. Hoard them, spend them only when it wins you more than it costs.`},
- {expect:null, text:`That's everything! The game ends when the <b>Collect pile empties</b>. Most Devante cards wins; ties go to the highest-ranking Devante held — Corium, rank 1, beats all. You gain Devante cards three ways: your opening hand, <b>drawing them</b> from the Collect pile, and <b>stealing</b> them.<br><br>Handy tips: <b>double-tap</b> any card to inspect it up close · the <b>🎵 and 🔊</b> chips open the audio panel · <b>⏱</b> changes the game speed. Good luck!`, finale:true},
+ {expect:null, text:`That's everything! The game ends when the <b>Collect pile empties</b>. Most Devante cards wins; ties go to the highest-ranking Devante held — Corium, rank 1, beats all. You gain Devante cards three ways: your opening hand, <b>drawing them</b> from the Collect pile, and <b>stealing</b> them.<br><br>Handy tips: <b>double-tap</b> any card to inspect it up close · the <b>note and speaker</b> buttons open the audio panel · <b>⏱</b> changes the game speed. Good luck!`, finale:true},
 ];
 function startTutorial(){
   S={players:[
@@ -1920,11 +1920,13 @@ async function gameOver(reason){
     if(sc.devs.length) sc.devs.sort((a,b)=>a.rank-b.rank).forEach(d=>{const el=cardEl(d); el.classList.add("shimmer"); el.style.cursor="default"; mh.appendChild(el);});
     else mh.innerHTML=`<span style="color:var(--parchment-dim);font-style:italic;font-size:14px">no Devante cards</span>`;
     row.appendChild(mh); rows.appendChild(row);
+    box.scrollTo({top:box.scrollHeight,behavior:"smooth"});
     await pause(Math.round(T("reveal")*0.75));
   }
   const burned=S.burn.filter(c=>c.kind==="devante");
   rows.insertAdjacentHTML("beforeend",
     `<div class="alloc-row" style="border-color:#4a2318"><span class="an" style="color:#d99a83">🔥 Burned</span><span>${burned.length?burned.map(d=>d.name).join(", "):"none"}</span></div>`);
+  box.scrollTo({top:box.scrollHeight,behavior:"smooth"});
   await pause(T("beat"));
   const vd=$("verdict");
   if(tie){
@@ -1951,8 +1953,9 @@ async function gameOver(reason){
   const b=document.createElement("button");b.className="abtn primary";b.style.cssText="width:100%;margin-top:10px";b.textContent="Play again";
   b.onclick=()=>location.reload();
   vd.appendChild(b);
+  setTimeout(()=>box.scrollTo({top:box.scrollHeight,behavior:"smooth"}),150);
 }
 </script>
-<span id="menuChip" onclick="confirmMenu()">🏠</span>
+<span id="menuChip" onclick="confirmMenu()"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#c9a75f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block"><path d="M4 21V11c0-4.4 3.6-8 8-8s8 3.6 8 8v10"/><path d="M9 21v-5c0-1.7 1.3-3 3-3s3 1.3 3 3v5"/><path d="M2 21h20"/></svg></span>
 </body>
 </html>
