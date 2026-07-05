@@ -1728,13 +1728,11 @@ function fanPickWatch(att,def,n){
     const {row,cards}=buildFan(mapping.length);
     box.appendChild(row);
     $("modal").classList.add("on");
-    const worth=c=>c.kind==="devante"?100-(c.rank||0):c.kind==="dragon"?50:c.kind==="character"?(c.assistant?20:30):c.kind==="ability"?10:1;
     const stolen=[]; let k=0;
     const pickOne=()=>{
       const avail=cards.map((el,i)=>({el,i})).filter(x=>!x.el.classList.contains("flipped"));
-      // a real rival reaches for your best — Devantes first, then characters, then the rest
-      avail.sort((a,b)=>worth(mapping[b.i])-worth(mapping[a.i]));
-      const pick=avail[0];
+      // cards are face-down: the pick is blind — uniformly random, no favouritism
+      const pick=avail[Math.floor(Math.random()*avail.length)];
       pick.el.classList.add("aipick");
       setTimeout(()=>{
         const card=mapping[pick.i];
