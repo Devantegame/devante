@@ -236,6 +236,7 @@
   .fan-card.flipped{transform:translateY(-18px) scale(1.06);z-index:6;border-color:var(--brass-hi);
     box-shadow:0 0 18px rgba(232,207,142,.4);cursor:default}
   .fan-card.aipick{outline:2px solid var(--ember)}
+  .fan-card.big{transform:translateY(-34px) scale(2.1)!important;z-index:60;box-shadow:0 14px 44px rgba(0,0,0,.85)}
   /* speed chip */
   #speedChip{
     flex:0 0 auto;
@@ -665,7 +666,7 @@ function startGame(nAI){
   S = {
     players:[{name:"You", human:true, hand:[], shield:null, devUsedTurn:false}],
     collect:deck, discard:[], burn:[],
-    turn:0, log:[], busy:false, sel:new Set(),
+    turn:0, log:[], busy:false, sel:new Set(), mustDraw:false,
   };
   for(let i=0;i<nAI;i++) S.players.push({name:AI_NAMES[i], human:false, hand:[], shield:null, devUsedTurn:false, knowledge:{}});
   // deal
@@ -797,11 +798,12 @@ function render(){
       if(lastTap.id===c.id && now-lastTap.t<320){
         lastTap={id:null,t:0};
         // second tap: revert the first tap's toggle, then inspect
-        if(!(S.busy||S.turn!==0)){ S.sel.has(c.id)?S.sel.delete(c.id):S.sel.add(c.id); }
+        if(!(S.busy||S.turn!==0||S.mustDraw)){ S.sel.has(c.id)?S.sel.delete(c.id):S.sel.add(c.id); }
         inspectCard(c); render(); return;
       }
       lastTap={id:c.id,t:now};
       if(S.busy||S.turn!==0) return;
+      if(S.mustDraw){ toast(`Draw a card first — tap the glowing Collect pile.`); return; }
       S.sel.has(c.id)?S.sel.delete(c.id):S.sel.add(c.id); render();
     };
     h.appendChild(el);
@@ -824,6 +826,7 @@ function analyseSelection(sel){
 
 function renderActions(){
   const bar=$("actionBar"); bar.innerHTML="";
+  if(S.mustDraw){ bar.innerHTML=`<div class="hint">Tap the glowing Collect pile to draw your card.</div>`; return; }
   if(S.turn!==0||S.busy){ bar.innerHTML=`<div class="hint">${S.busy?"…":"Waiting for rivals…"}</div>`; return; }
   const sel=selectedCards();
   const a=analyseSelection(sel);
@@ -1083,49 +1086,77 @@ function broomOptions(p){
 }
 function humanDefend(def,att,units,attackType,abilityCount){
   return new Promise(res=>{
-    const {chars,brooms}=broomOptions(def);
+    const chars=def.hand.filter(c=>c.kind==="character"&&!c.assistant&&c.traits.includes("broomstick"));
+    const assts=def.hand.filter(c=>c.kind==="character"&&c.assistant);
+    const brooms=def.hand.filter(c=>c.kind==="ability"&&c.sub==="broomstick");
     const devs=def.hand.filter(c=>c.kind==="devante");
     const canBroom=chars.length&&brooms.length;
     const canDev=devs.length>0 && !def.devUsedTurn;
     if(!canBroom&&!canDev){ log(`You cannot defend — brace yourself.`); res(units); return; }
     const box=$("modalBox");
-    box.innerHTML=`<h2>${att.name} attacks you!</h2>
-      <p>${units} ${attackType==="spell"?"spell":"crystal"} unit${units>1?"s":""} remain after your shields. Counter, or take the hit.</p>`;
+    box.innerHTML=`<h2>${att.name} attacks you!</h2><p>${units} ${attackType==="spell"?"spell":"crystal"} unit${units>1?"s":""} remain after your shields. Choose your defenders — every card used is refunded from the Collect pile.</p>`;
     if(canBroom){
-      // Rulebook: you can never defend with more broomsticks than the ability CARDS attacking you
       const maxB=Math.min(units,brooms.length,abilityCount||units);
-      box.insertAdjacentHTML("beforeend",`<p style="font-size:14px">Sweep away up to <b>${maxB}</b> unit${maxB>1?"s":""} with <b>${chars[0].name}</b> + broomsticks. Every card you use in defence is refunded from the Collect pile — the character included.</p>`);
+      let selChar=0, selAsst=-1, v=maxB;
+      const pickerRow=(label,items,getSel,setSel,allowNone)=>{
+        const row=document.createElement("div"); row.className="alloc-row"; row.style.flexWrap="wrap";
+        row.innerHTML=`<span class="an" style="width:100%;margin-bottom:6px">${label}</span>`;
+        const wrap=document.createElement("div"); wrap.style.cssText="display:flex;gap:6px;flex-wrap:wrap";
+        const btns=[];
+        const paint=()=>btns.forEach((b,k)=>b.className="abtn"+(getSel()===(allowNone?k-1:k)?" primary":""));
+        if(allowNone){ const nb=document.createElement("button"); nb.textContent="No assistant";
+          nb.onclick=()=>{setSel(-1);paint();refresh();}; btns.push(nb); wrap.appendChild(nb); }
+        items.forEach((it,k)=>{ const b=document.createElement("button"); b.textContent=it.name;
+          b.onclick=()=>{setSel(k);paint();refresh();}; btns.push(b); wrap.appendChild(b); });
+        row.appendChild(wrap); box.appendChild(row); paint();
+      };
+      pickerRow("Character",chars,()=>selChar,x=>selChar=x,false);
+      if(assts.length) pickerRow("Assistant ×2",assts,()=>selAsst,x=>selAsst=x,true);
       const st=document.createElement("div");st.className="alloc-row";
       st.innerHTML=`<span class="an">Broomsticks</span>`;
       const stp=document.createElement("div");stp.className="stepper";
-      let v=maxB;
       const minus=document.createElement("button");minus.textContent="−";
       const num=document.createElement("span");num.textContent=v;
       const plus=document.createElement("button");plus.textContent="+";
-      minus.onclick=()=>{v=Math.max(1,v-1);num.textContent=v};
-      plus.onclick=()=>{v=Math.min(maxB,v+1);num.textContent=v};
+      minus.onclick=()=>{v=Math.max(1,v-1);num.textContent=v;refresh();};
+      plus.onclick=()=>{v=Math.min(maxB,v+1);num.textContent=v;refresh();};
       stp.append(minus,num,plus); st.appendChild(stp); box.appendChild(st);
-      const b=document.createElement("button");b.className="abtn primary";b.style.width="100%";b.textContent="Counter with broomsticks";
-      b.onclick=async ()=>{
-        const used=brooms.slice(0,v); const chSpent=chars[0];
-        const spent=[chSpent,...used];
+      const summary=document.createElement("p"); summary.style.cssText="text-align:center;font-size:14.5px";
+      box.appendChild(summary);
+      const go=document.createElement("button"); go.className="abtn primary"; go.style.width="100%";
+      box.appendChild(go);
+      const calc=()=>{
+        const asst=selAsst>=0?assts[selAsst]:null;
+        const mult=multiplier(chars[selChar],asst);
+        const cancel=Math.min(v*mult,units);
+        const spentN=v+1+(asst?1:0);
+        return {asst,cancel,spentN};
+      };
+      function refresh(){
+        const {asst,cancel,spentN}=calc();
+        summary.innerHTML=`Cancels <b>${cancel}</b> of ${units} unit${units>1?"s":""} · <b>${spentN}</b> card${spentN>1?"s":""} refunded`;
+        go.textContent=`Counter — cancel ${cancel}`;
+      }
+      refresh();
+      go.onclick=async ()=>{
+        const {asst,cancel,spentN}=calc();
+        const spent=[chars[selChar],...(asst?[asst]:[]),...brooms.slice(0,v)];
         removeFromHand(def,spent); toDiscard(spent);
-        const drew=drawCards(def,spent.length);   // refund EVERY card used in defence, character included
+        const drew=drawCards(def,spent.length);   // every defence card refunded
         fxDrawFly(def,drew);
         playSfx("broom");
         fxSweep(boxOf(def));
-        log(`🧹 You counter with ${v} broomstick${v>1?"s":""} + ${chSpent.name} and collect ${drew} back.`);
+        log(`🧹 You counter with ${v} broomstick${v>1?"s":""}${asst?" + "+asst.name+" ×2":""} + ${chars[selChar].name} — ${cancel} cancelled, ${drew} collected back.`);
         $("modal").classList.remove("on"); render();
         await celebrateFinds(def,drew);
-        res(units-v);
+        res(units-cancel);
       };
-      box.appendChild(b);
     }
     if(canDev){
       const b=document.createElement("button");b.className="abtn";b.style.width="100%";b.style.marginTop="8px";
       b.textContent=`Block everything with a Devante (burns it)`;
       b.onclick=()=>{
-        const d=devs.sort((a,b)=>b.rank-a.rank)[0]; // spend lowest-value (highest rank number)
+        const d=devs.sort((a,b)=>b.rank-a.rank)[0];
         removeFromHand(def,[d]); toBurn([d]); def.devUsedTurn=true;
         const drew=drawCards(def,2);
         log(`📕 You burn <b>${d.name}</b> as a broomstick — attack repelled, drew ${drew}.`);
@@ -1142,10 +1173,11 @@ function humanDefend(def,att,units,attackType,abilityCount){
   });
 }
 async function aiDefend(def,att,units,attackType,abilityCount){
-  const {chars,brooms}=broomOptions(def);
+  const chars=def.hand.filter(c=>c.kind==="character"&&!c.assistant&&c.traits.includes("broomstick"));
+  const assts=def.hand.filter(c=>c.kind==="character"&&c.assistant);
+  const brooms=def.hand.filter(c=>c.kind==="ability"&&c.sub==="broomstick");
   const devs=def.hand.filter(c=>c.kind==="devante");
   const holdingDev=devs.length;
-  // Devante block if big attack & protecting devantes
   if(holdingDev && !def.devUsedTurn && attackType==="spell" && units>=2 && (holdingDev>=2||units>=3)){
     const d=devs.sort((a,b)=>b.rank-a.rank)[0];
     removeFromHand(def,[d]); toBurn([d]); def.devUsedTurn=true;
@@ -1156,15 +1188,18 @@ async function aiDefend(def,att,units,attackType,abilityCount){
   }
   if(chars.length&&brooms.length){
     const v=Math.min(units,brooms.length,abilityCount||units);
-    const spent=[chars[0],...brooms.slice(0,v)];
+    // use an assistant when it actually adds cancelled units
+    const asst=(assts[0] && v*multiplier(chars[0],assts[0]) > v*multiplier(chars[0],null) && v*multiplier(chars[0],null)<units)?assts[0]:null;
+    const cancel=Math.min(v*multiplier(chars[0],asst),units);
+    const spent=[chars[0],...(asst?[asst]:[]),...brooms.slice(0,v)];
     removeFromHand(def,spent); toDiscard(spent);
-    const drew=drawCards(def,spent.length);   // refund EVERY card used in defence, character included
+    const drew=drawCards(def,spent.length);
     fxDrawFly(def,drew);
     playSfx("broom");
     fxSweep(boxOf(def));
-    log(`🧹 <b>${def.name}</b> counters with ${v} broomstick${v>1?"s":""} (collected ${drew} back).`);
-    await showPlay(def.name, `counters with ${v} broomstick${v>1?"s":""} + ${chars[0].name}`, spent);
-    return units-v;
+    log(`🧹 <b>${def.name}</b> counters with ${v} broomstick${v>1?"s":""}${asst?" + "+asst.name+" ×2":""} — ${cancel} cancelled (collected ${drew} back).`);
+    await showPlay(def.name, `counters — ${v} broomstick${v>1?"s":""}${asst?" doubled by "+asst.name:""}`, spent);
+    return units-cancel;
   }
   return units;
 }
@@ -1642,12 +1677,13 @@ function fanPickWatch(att,def,n){
         stolen.push(card);
         playSfx("pick");
         flipFanCard(pick.el,card);
+        pick.el.classList.add("big");   // the stolen card looms large so you see what you lose
         if(card.kind==="devante"){ pick.el.classList.add("shimmer"); playSfx("found"); }
         if(card.kind==="dragon") playSfx("dragon-found");
-        setTimeout(()=>fxFlyToRival(pick.el,att), Math.round(T("beat")*0.9));
+        setTimeout(()=>{ pick.el.classList.remove("big"); setTimeout(()=>fxFlyToRival(pick.el,att),240); }, Math.round(T("beat")*1.5));
         k++;
-        if(k<n) setTimeout(pickOne, Math.round(T("beat")*1.3));
-        else setTimeout(()=>{$("modal").classList.remove("on");res(stolen);}, Math.round(T("reveal")));
+        if(k<n) setTimeout(pickOne, Math.round(T("beat")*2.1));
+        else setTimeout(()=>{$("modal").classList.remove("on");res(stolen);}, Math.round(T("reveal")*1.2));
       }, Math.round(T("beat")*0.5));
     };
     pickOne();
@@ -1660,12 +1696,14 @@ const pause=ms=>new Promise(r=>setTimeout(r,ms));
 /* Your turn opens with a glowing arrow on the Collect pile — tap it to draw. */
 function humanTapDraw(){
   return new Promise(res=>{
+    S.mustDraw=true; render();
     const pileWrap=$("collectPile");
     const pile=pileWrap.querySelector(".pile-card");
     pileWrap.classList.add("your-draw");
     log(`Your turn — <b>tap the Collect pile</b> to draw your card.`);
     pile.onclick=async ()=>{
       pile.onclick=null; pileWrap.classList.remove("your-draw");
+      S.mustDraw=false;
       const me=S.players[0];
       const n = me.hand.length===0 ? 2 : 1;   // empty hand: draw two this turn
       playSfx("pick");
@@ -1803,7 +1841,7 @@ const TUT_STEPS=[
  {expect:null,
   intro:async()=>{
     await showPlay("Character Cards","make your plays — the floating medallions show which abilities each commands",[mk("character","Mason")]);
-    await showPlay("Ability Cards","power the play — their icon must match the Character's",[mk("ability","spell"),mk("ability","broomstick")]);
+    await showPlay("Ability Cards","power the play — their icon must match the Character's. Potions answer only to Odorf, Crystal Balls only to Diamone",[mk("ability","spell"),mk("ability","broomstick"),mk("ability","crystal"),mk("ability","potion")]);
     await showPlay("Assistant Cards","join a Character to double the whole play",[mk("character","Getergrin")]);
     playSfx("found");
     await showPlay("Devante Cards","✨ the treasures themselves — hold the most to win",[mk("devante","Aurum")]);
@@ -1829,8 +1867,8 @@ const TUT_STEPS=[
   text:`Spying. Only <b>Diamone</b> can use <b>Crystal Balls</b>. Your Rival has a potion shield (see the green pip) — shields eat your crystal units first, so you need a spare unit to see through. Select Diamone + <b>both</b> Crystal Balls and scry the Rival.`,
   hint:`Select Diamone and both Crystal Ball cards, then Scry.`,
   done:`One ball burst their potion, the second revealed their hand — knowledge is power when choosing whom to rob. With several balls you can view several rivals in one play.`},
- {expect:"defend", hand:[["character","Naldy"],["ability","broomstick"],["ability","broomstick"],["object","Forgotten Goblet"],["object","Dusty Candelabra"]], rivalCount:4,
-  text:`Defence! Your Rival is about to attack you with 2 spells. When the prompt appears, counter with <b>Naldy and your Broomsticks</b> — each broomstick sweeps away one incoming unit, and every card you play in defence (Naldy included) is refunded from the Collect pile. Defending never costs you your turn.`,
+ {expect:"defend", hand:[["character","Naldy"],["character","Smookers"],["ability","broomstick"],["ability","broomstick"],["object","Forgotten Goblet"]], rivalCount:4,
+  text:`Defence! Your Rival is about to attack you with 2 spells. A window will appear where <b>you choose your defenders</b>: pick <b>Naldy</b>, set how many broomsticks — and notice you can add <b>Smookers</b> to double every broomstick. Every card you play in defence is refunded from the Collect pile. Defending never costs you your turn.`,
   script:async()=>{
     S.busy=true; render();
     const rival=S.players[1];
@@ -1840,7 +1878,7 @@ const TUT_STEPS=[
     await resolveSpellOnTargets(rival,{0:2},3,2);
     S.busy=false; tutActionDone();
   },
-  done:`Broomsticks are purely defensive — you can never counter with more broomsticks than the ability cards attacking you, and they're powerless against Devante cards.`},
+  done:`Broomsticks are purely defensive — you can never counter with more broomstick cards than the ability cards attacking you, an assistant doubles what each broomstick cancels, and they're powerless against Devante cards.`},
  {expect:"potion", hand:[["character","Odorf"],["ability","potion"],["ability","potion"],["object","Blank Parchment"]], rivalCount:5,
   intro:async()=>{
     playSfx("potion");
@@ -1859,7 +1897,7 @@ function startTutorial(){
   S={players:[
       {name:"You",human:true,hand:[],shield:null,devUsedTurn:false},
       {name:"Rival",human:false,hand:[],shield:null,devUsedTurn:false,knowledge:{}}],
-     collect:[],discard:[],burn:[],turn:0,log:[],busy:false,sel:new Set()};
+     collect:[],discard:[],burn:[],turn:0,log:[],busy:false,sel:new Set(),mustDraw:false};
   for(let i=0;i<40;i++)S.collect.push(mk("object",OBJECTS[i%3].name));
   TUT={i:-1};
   $("startScreen").style.display="none";
