@@ -514,7 +514,7 @@ function getBuf(base){
 }
 function preloadSounds(){
   if(!AC) return;
-  ["deal","pick","spell","broom","potion","crystal","discard","devante","found",
+  ["deal","pick","spell","broom","potion","crystal","discard","devante","found","devante-stolen",
    "dragon","dragon-found","scores","victory","defeat","theme"].forEach(n=>getBuf(n));
 }
 function audioTry(el,base){
@@ -971,9 +971,11 @@ async function resolveSpellOnTargets(att,alloc,cardsPlayed,abilityCount){
     let rem=absorbWithShield(def,units,"spell");
     render(); if(rem<=0){ await pause(T("beat")); continue;}
     rem=await defendPhase(def,att,rem,"spell",abilityCount);
+    if(rem<=0){ log(`🧹 <b>${def.name}</b> swept your entire attack aside — nothing to steal.`); await pause(T("beat")); }
     if(rem>0){
       const stolen=await pickStealCards(att,def,rem);
       att.hand.push(...stolen);
+      fxSteal(att,def,stolen.length);
       const names = (att.human||def.human)? stolen.map(c=>`<b>${c.name}</b>`).join(", ")||"nothing" : `${stolen.length} card${stolen.length!==1?"s":""}`;
       log(`💰 <b>${att.name}</b> steals ${names} from <b>${def.name}</b>.`);
       render(); await pause(T("beat"));
@@ -1028,6 +1030,7 @@ async function resolveCrystalOnTargets(att,alloc,cardsPlayed,abilityCount){
     render();
     if(rem<=0){ log(`${def.name}’s defences cloud the vision.`); await pause(T("beat")); continue; }
     rem=await defendPhase(def,att,rem,"crystal",abilityCount);
+    if(rem<=0){ log(`🧹 <b>${def.name}</b> swept your crystal aside — the vision is lost.`); if(att.human) toast(`${def.name} blocked your scrying — no hand revealed`); await pause(T("beat")); }
     if(rem>0){
       if(att.human) reveals.push(def);
       else {
@@ -1108,7 +1111,7 @@ function humanDefend(def,att,units,attackType,abilityCount){
     const box=$("modalBox");
     box.innerHTML=`<h2>${att.name} attacks you!</h2><p>${units} ${attackType==="spell"?"spell":"crystal"} unit${units>1?"s":""} remain after your shields. Tap the cards you want to defend with — every card used is refunded from the Collect pile.</p>`;
     if(canBroom){
-      const maxB=Math.min(units,brooms.length,abilityCount||units);
+      const maxB=Math.min(units,brooms.length);
       let selChar=0, selAsst=-1;
       const selBrooms=new Set(brooms.slice(0,maxB).map(c=>c.id));   // preselect up to the cap
       const cardRow=(label,cards,isSel,onTap)=>{
@@ -1127,10 +1130,10 @@ function humanDefend(def,att,units,attackType,abilityCount){
       const rows=[];
       rows.push(cardRow("Character",chars,(c,k)=>k===selChar,(c,k)=>{selChar=k;}));
       if(assts.length) rows.push(cardRow("Assistant ×2 — tap to add, tap again to remove",assts,(c,k)=>k===selAsst,(c,k)=>{selAsst=(selAsst===k?-1:k);}));
-      rows.push(cardRow("Broomsticks (max ${maxB})",brooms,(c)=>selBrooms.has(c.id),(c)=>{
+      rows.push(cardRow(`Broomsticks (max ${maxB})`,brooms,(c)=>selBrooms.has(c.id),(c)=>{
         if(selBrooms.has(c.id)) selBrooms.delete(c.id);
         else if(selBrooms.size<maxB) selBrooms.add(c.id);
-        else toast(`You can't use more broomsticks than the cards attacking you.`);
+        else toast(`You can't use more broomsticks than the incoming steals.`);
       }));
       function repaint(){
         rows[0].mh.childNodes.forEach((el,k)=>el.classList.toggle("sel",k===selChar));
@@ -1208,7 +1211,7 @@ async function aiDefend(def,att,units,attackType,abilityCount){
     return 0;
   }
   if(chars.length&&brooms.length){
-    const v=Math.min(units,brooms.length,abilityCount||units);
+    const v=Math.min(units,brooms.length);
     // use an assistant when it actually adds cancelled units
     const asst=(assts[0] && v*multiplier(chars[0],assts[0]) > v*multiplier(chars[0],null) && v*multiplier(chars[0],null)<units)?assts[0]:null;
     const cancel=Math.min(v*multiplier(chars[0],asst),units);
@@ -1235,7 +1238,7 @@ async function playDragon(card){
   removeFromHand(me,[card]); toDiscard([card]); S.sel.clear();
   S.busy=true; render();
   const drew=drawCards(me,4);
-  const drawn=me.hand.slice(handBefore);
+  const drawn=drew? me.hand.slice(-drew) : [];
   if(drawn.some(c=>c.kind==="devante")) playSfx("found");
   log(`🐉 You unleash the <b>Dragon</b> and sweep up ${drew} cards from the Collect pile!`);
   await showPlay("You", `unleash the Dragon — ${drew} cards from the Collect pile`, drawn);
@@ -1541,6 +1544,22 @@ function dealAnimation(){
   });
 }
 /* a glowing REFUND +N tag rises from the Collect pile toward whoever earned it */
+function fxSteal(att,def,n){
+  try{
+    if(!n) return;
+    const from=centerOf(boxOf(def)), to=centerOf(boxOf(att));
+    const d=document.createElement("div"); d.className="fx-refund";
+    d.style.color="#e0917f"; d.style.textShadow="0 0 12px rgba(179,64,47,.95),0 2px 4px rgba(0,0,0,.8)";
+    d.textContent="✋ STOLE +"+n;
+    d.style.cssText+=`left:${from.x-40}px;top:${from.y-14}px;opacity:0`;
+    document.body.appendChild(d);
+    requestAnimationFrame(()=>{ d.style.opacity="1";
+      d.style.left=(from.x+(to.x-from.x)*0.5-40)+"px";
+      d.style.top=(from.y+(to.y-from.y)*0.5-14)+"px"; });
+    setTimeout(()=>{ d.style.opacity="0"; d.style.top=(parseFloat(d.style.top)-26)+"px"; },1000);
+    setTimeout(()=>d.remove(),1600);
+  }catch(e){}
+}
 function fxRefund(p,n){
   try{
     if(!n) return;
@@ -1721,7 +1740,7 @@ function fanPickWatch(att,def,n){
         playSfx("pick");
         flipFanCard(pick.el,card);
         pick.el.classList.add("big");   // the stolen card looms large so you see what you lose
-        if(card.kind==="devante"){ pick.el.classList.add("shimmer"); playSfx("found"); }
+        if(card.kind==="devante"){ pick.el.classList.add("shimmer"); playSfx("devante-stolen"); }
         if(card.kind==="dragon") playSfx("dragon-found");
         setTimeout(()=>{ pick.el.classList.remove("big"); setTimeout(()=>fxFlyToRival(pick.el,att),240); }, Math.round(T("beat")*1.5));
         k++;
@@ -1921,7 +1940,7 @@ const TUT_STEPS=[
     await resolveSpellOnTargets(rival,{0:2},3,2);
     S.busy=false; tutActionDone();
   },
-  done:`Broomsticks are purely defensive — you can never counter with more broomstick cards than the ability cards attacking you, an assistant doubles what each broomstick cancels, and they're powerless against Devante cards.`},
+  done:`Broomsticks are purely defensive — you can never counter with more broomstick cards than the incoming steals, an assistant doubles what each broomstick cancels, and they're powerless against Devante cards.`},
  {expect:"potion", hand:[["character","Odorf"],["ability","potion"],["ability","potion"],["object","Blank Parchment"]], rivalCount:5,
   intro:async()=>{
     playSfx("potion");
