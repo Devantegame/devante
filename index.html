@@ -241,7 +241,7 @@
   .fan-card.flipped{transform:translateY(-18px) scale(1.06);z-index:6;border-color:var(--brass-hi);
     box-shadow:0 0 18px rgba(232,207,142,.4);cursor:default}
   .fan-card.aipick{outline:2px solid var(--ember)}
-  .fan-card.big{transform:translateY(-34px) scale(2.1)!important;z-index:60;box-shadow:0 14px 44px rgba(0,0,0,.85)}
+  .fan-card.taken{opacity:.3;filter:grayscale(.6)}
   /* speed chip */
   #speedChip{
     flex:0 0 auto;
@@ -1126,7 +1126,7 @@ function humanDefend(def,att,units,attackType,abilityCount){
     const canDev=devs.length>0 && !def.devUsedTurn;
     if(!canBroom&&!canDev){ log(`You cannot defend — brace yourself.`); res(units); return; }
     const box=$("modalBox");
-    box.innerHTML=`<h2>${att.name} attacks you!</h2><p>Incoming: <b>${units}</b> ${attackType==="spell"?"steal":"gaze"}${units>1?"s":""}. Tap the cards to deflect with — every card used is replenished from the Collect pile after the attack.</p>`;
+    box.innerHTML=`<h2>${att.name} attacks you!</h2><p>Incoming: <b>${units}</b> ${attackType==="spell"?"steal":"gaze"}${units>1?"s":""}. Choose the cards for your defence — every card you use is replenished from the Collect pile after the attack.</p>`;
     if(canBroom){
       const maxB=Math.min(units,brooms.length);
       let selChar=0, selAsst=-1;
@@ -1771,7 +1771,6 @@ function fanPickWatch(att,def,n){
     if(skipBtn) skipBtn.onclick=()=>{ skipped=true; };
     const close=(delay)=>{ setTimeout(()=>{ $("modal").classList.remove("on"); res(stolen); }, delay); };
     const finishFast=()=>{
-      // impatient path: remaining cards still flip visibly, in a quick cascade
       let d=0;
       while(k<n){
         const avail=cards.map((el,i)=>({el,i})).filter(x=>!x.el.classList.contains("flipped"));
@@ -1782,19 +1781,41 @@ function fanPickWatch(att,def,n){
         stolen.push(card); k++;
         setTimeout(()=>{ flipFanCard(pick.el,card);
           if(card.kind==="devante") pick.el.classList.add("shimmer");
-          setTimeout(()=>fxFlyToRival(pick.el,att),260);
+          setTimeout(()=>{ fxFlyToRival(pick.el,att); pick.el.classList.add("taken"); },260);
         }, d);
         d+=140;
       }
       playSfx("pick");
       close(d+620);
     };
+    /* the reveal: a body-level clone rises to screen centre — never clipped, never off-screen */
+    const bigReveal=(el,card,hold)=>new Promise(done=>{
+      try{
+        const r=el.getBoundingClientRect();
+        const big=cardEl(card); big.classList.add("fx-card");
+        if(card.kind==="devante") big.classList.add("shimmer");
+        big.style.cssText+=`left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px;z-index:220`;
+        document.body.appendChild(big);
+        const W=window.innerWidth,H=window.innerHeight;
+        const bw=Math.min(150,Math.round(W*0.38)), bh=Math.round(bw*1.72);
+        requestAnimationFrame(()=>{ big.style.left=(W/2-bw/2)+"px"; big.style.top=(H/2-bh/2)+"px";
+          big.style.width=bw+"px"; big.style.height=bh+"px"; });
+        setTimeout(()=>{
+          try{ const t=boxOf(att).getBoundingClientRect();
+            big.style.left=(t.left+t.width/2-24)+"px"; big.style.top=(t.top+8)+"px";
+            big.style.width="48px"; big.style.height="80px"; big.style.opacity="0.15";
+          }catch(e){}
+          setTimeout(()=>{ big.remove(); done(); },460);
+        }, hold);
+      }catch(e){ done(); }
+    });
     const pickOne=()=>{
       if(skipped){ finishFast(); return; }
       const avail=cards.map((el,i)=>({el,i})).filter(x=>!x.el.classList.contains("flipped"));
       if(!avail.length||k>=n){ close(Math.round(T("reveal")*0.6)); return; }
       const pick=avail[Math.floor(Math.random()*avail.length)];   // face-down: blind, uniformly random
       pick.el.classList.add("aipick");
+      try{ pick.el.scrollIntoView({behavior:"smooth",inline:"center",block:"nearest"}); }catch(e){}
       setTimeout(()=>{
         if(skipped){ pick.el.classList.remove("aipick"); finishFast(); return; }
         const card=mapping[pick.i];
@@ -1802,16 +1823,16 @@ function fanPickWatch(att,def,n){
         stolen.push(card); k++;
         playSfx("pick");
         flipFanCard(pick.el,card);
-        pick.el.classList.add("big");   // each loss shown clearly, front and centre
         if(card.kind==="devante"){ pick.el.classList.add("shimmer"); playSfx("devante-stolen"); }
         if(card.kind==="dragon") playSfx("dragon-found");
         setTimeout(()=>{
-          pick.el.classList.remove("big");
-          setTimeout(()=>fxFlyToRival(pick.el,att),200);
-          if(k<n) setTimeout(pickOne, Math.round(T("beat")*0.45));
-          else close(Math.round(T("reveal")*0.6));
-        }, Math.round(T("beat")*1.05));
-      }, Math.round(T("beat")*0.3));
+          pick.el.classList.add("taken");
+          bigReveal(pick.el,card,Math.round(T("beat")*1.05)).then(()=>{
+            if(k<n) setTimeout(pickOne, Math.round(T("beat")*0.35));
+            else close(Math.round(T("reveal")*0.5));
+          });
+        }, 340);
+      }, Math.round(T("beat")*0.4));
     };
     pickOne();
   });

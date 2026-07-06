@@ -241,7 +241,7 @@
   .fan-card.flipped{transform:translateY(-18px) scale(1.06);z-index:6;border-color:var(--brass-hi);
     box-shadow:0 0 18px rgba(232,207,142,.4);cursor:default}
   .fan-card.aipick{outline:2px solid var(--ember)}
-  .fan-card.big{transform:translateY(-34px) scale(2.1)!important;z-index:60;box-shadow:0 14px 44px rgba(0,0,0,.85)}
+  .fan-card.taken{opacity:.3;filter:grayscale(.6)}
   /* speed chip */
   #speedChip{
     flex:0 0 auto;
@@ -1129,7 +1129,7 @@ function humanDefend(def,att,units,attackType,abilityCount){
     const canDev=devs.length>0 && !def.devUsedTurn;
     if(!canBroom&&!canDev){ log(`Защититься нечем — держитесь.`); res(units); return; }
     const box=$("modalBox");
-    box.innerHTML=`<h2>${att.name} нападает на вас!</h2><p>Надвигаются ${attackType==="spell"?"кражи":"взоры"}: ${units} (после ваших щитов). Коснитесь карт для защиты — каждая сыгранная карта восполнится из Добора после атаки.</p>`;
+    box.innerHTML=`<h2>${att.name} нападает на вас!</h2><p>Входящих ${attackType==="spell"?"краж":"взоров"}: <b>${units}</b>. Коснитесь карт для защиты — каждая карта восполнится из Добора после атаки.</p>`;
     if(canBroom){
       const maxB=Math.min(units,brooms.length);
       let selChar=0, selAsst=-1;
@@ -1761,51 +1761,82 @@ function fanPickWatch(att,def,n){
   return new Promise(res=>{
     const mapping=shuffle([...def.hand]);
     const box=$("modalBox");
-    box.innerHTML=`<h2>${att.name} тянется к вашим картам…</h2>
-      <p>Ваша рука раскрыта веером рубашками вверх. ${att.name} выбирает: ${n}.</p>
-      <p style="text-align:center;font-size:10px;letter-spacing:.2em;color:var(--bronze);text-transform:uppercase;margin-top:-6px">коснитесь, чтобы пропустить</p>`;
+    box.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+        <h2 style="margin:0">${att.name} тянется к вашим картам…</h2>
+        <button class="abtn" style="padding:7px 14px;font-size:11px;flex:0 0 auto" id="fanSkip">Пропустить ›</button>
+      </div>
+      <p>Ваша рука раскрыта веером рубашками вверх. ${att.name} выбирает: ${n}.</p>`;
     const {row,cards}=buildFan(mapping.length);
     box.appendChild(row);
     $("modal").classList.add("on");
     const stolen=[]; let k=0; let skipped=false;
-    box.onclick=()=>{ skipped=true; };
-    const close=(delay)=>{ box.onclick=null; setTimeout(()=>{ $("modal").classList.remove("on"); res(stolen); }, delay); };
+    const skipBtn=box.querySelector("#fanSkip");
+    if(skipBtn) skipBtn.onclick=()=>{ skipped=true; };
+    const close=(delay)=>{ setTimeout(()=>{ $("modal").classList.remove("on"); res(stolen); }, delay); };
     const finishFast=()=>{
+      let d=0;
       while(k<n){
         const avail=cards.map((el,i)=>({el,i})).filter(x=>!x.el.classList.contains("flipped"));
         if(!avail.length) break;
-        const pick=avail[Math.floor(Math.random()*avail.length)];   // face-down: blind and uniformly random
+        const pick=avail[Math.floor(Math.random()*avail.length)];   // face-down: blind, uniformly random
         const card=mapping[pick.i];
         def.hand=def.hand.filter(c=>c.id!==card.id);
         stolen.push(card); k++;
-        flipFanCard(pick.el,card);
-        if(card.kind==="devante") pick.el.classList.add("shimmer");
+        setTimeout(()=>{ flipFanCard(pick.el,card);
+          if(card.kind==="devante") pick.el.classList.add("shimmer");
+          setTimeout(()=>{ fxFlyToRival(pick.el,att); pick.el.classList.add("taken"); },260);
+        }, d);
+        d+=140;
       }
       playSfx("pick");
-      close(420);
+      close(d+620);
     };
+    /* the reveal: a body-level clone rises to screen centre — never clipped, never off-screen */
+    const bigReveal=(el,card,hold)=>new Promise(done=>{
+      try{
+        const r=el.getBoundingClientRect();
+        const big=cardEl(card); big.classList.add("fx-card");
+        if(card.kind==="devante") big.classList.add("shimmer");
+        big.style.cssText+=`left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px;z-index:220`;
+        document.body.appendChild(big);
+        const W=window.innerWidth,H=window.innerHeight;
+        const bw=Math.min(150,Math.round(W*0.38)), bh=Math.round(bw*1.72);
+        requestAnimationFrame(()=>{ big.style.left=(W/2-bw/2)+"px"; big.style.top=(H/2-bh/2)+"px";
+          big.style.width=bw+"px"; big.style.height=bh+"px"; });
+        setTimeout(()=>{
+          try{ const t=boxOf(att).getBoundingClientRect();
+            big.style.left=(t.left+t.width/2-24)+"px"; big.style.top=(t.top+8)+"px";
+            big.style.width="48px"; big.style.height="80px"; big.style.opacity="0.15";
+          }catch(e){}
+          setTimeout(()=>{ big.remove(); done(); },460);
+        }, hold);
+      }catch(e){ done(); }
+    });
     const pickOne=()=>{
       if(skipped){ finishFast(); return; }
       const avail=cards.map((el,i)=>({el,i})).filter(x=>!x.el.classList.contains("flipped"));
-      if(!avail.length||k>=n){ close(Math.round(T2("reveal")*0.8)); return; }
-      const pick=avail[Math.floor(Math.random()*avail.length)];   // face-down: blind and uniformly random
+      if(!avail.length||k>=n){ close(Math.round(T("reveal")*0.6)); return; }
+      const pick=avail[Math.floor(Math.random()*avail.length)];   // face-down: blind, uniformly random
       pick.el.classList.add("aipick");
+      try{ pick.el.scrollIntoView({behavior:"smooth",inline:"center",block:"nearest"}); }catch(e){}
       setTimeout(()=>{
-        if(skipped){ finishFast(); return; }
+        if(skipped){ pick.el.classList.remove("aipick"); finishFast(); return; }
         const card=mapping[pick.i];
         def.hand=def.hand.filter(c=>c.id!==card.id);
         stolen.push(card); k++;
         playSfx("pick");
         flipFanCard(pick.el,card);
-        pick.el.classList.add("big");
         if(card.kind==="devante"){ pick.el.classList.add("shimmer"); playSfx("devante-stolen"); }
         if(card.kind==="dragon") playSfx("dragon-found");
-        setTimeout(()=>{ pick.el.classList.remove("big"); setTimeout(()=>fxFlyToRival(pick.el,att),200); }, Math.round(T2("beat")*0.8));
-        if(k<n) setTimeout(pickOne, Math.round(T2("beat")*1.2));
-        else close(Math.round(T2("reveal")*0.8));
-      }, Math.round(T2("beat")*0.35));
+        setTimeout(()=>{
+          pick.el.classList.add("taken");
+          bigReveal(pick.el,card,Math.round(T("beat")*1.05)).then(()=>{
+            if(k<n) setTimeout(pickOne, Math.round(T("beat")*0.35));
+            else close(Math.round(T("reveal")*0.5));
+          });
+        }, 340);
+      }, Math.round(T("beat")*0.4));
     };
-    const T2=T3=>T(T3);
     pickOne();
   });
 }
