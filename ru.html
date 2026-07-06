@@ -225,7 +225,12 @@
   #playFxBox .pfskip{font-size:12px;color:var(--bronze);margin-top:10px;letter-spacing:.12em;text-transform:uppercase}
   .card-back img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:7px}
   /* fan picker for stealing cards */
-  #fanRow{display:flex;justify-content:center;flex-wrap:wrap;row-gap:28px;padding:18px 0 8px;min-height:150px}
+  .fan-wrap{position:relative}
+  #fanRow{display:flex;overflow-x:auto;padding:18px 4px 10px;min-height:150px;scrollbar-width:thin;-webkit-overflow-scrolling:touch}
+  #fanRow .fan-inner{display:flex;margin:0 auto;padding:0 22px;flex:0 0 auto}
+  .fan-wrap.scrollable::after{content:"‹ листайте ›";position:absolute;right:10px;bottom:-4px;
+    font-family:'Cinzel',serif;font-size:10px;letter-spacing:.2em;color:var(--bronze);animation:swipeHint 1.4s ease infinite}
+  @keyframes swipeHint{0%,100%{opacity:.5;transform:translateX(0)}50%{opacity:1;transform:translateX(-5px)}}
   .fan-card{
     width:80px;height:138px;border-radius:8px;margin-left:-34px;position:relative;
     border:1.5px solid var(--bronze);overflow:hidden;background:#101008;
@@ -315,7 +320,7 @@
     45%{transform:translate(-5px,-3px)}60%{transform:translate(4px,3px)}75%{transform:translate(-3px,1px)}}
   /* dealing animation */
   #dealFx{position:fixed;inset:0;z-index:95;display:none;flex-direction:column;align-items:center;justify-content:center;
-    gap:14px;background:rgba(10,9,4,.88);backdrop-filter:blur(3px)}
+    gap:14px;background:radial-gradient(ellipse 90% 60% at 50% 35%, #23200f 0%, #0c0b06 70%),#0c0b06}
   #dealFx.on{display:flex}
   #dealFx .dtitle{font-family:'Cinzel',serif;font-size:16px;font-weight:700;letter-spacing:.18em;color:var(--brass-hi);text-transform:uppercase}
   #dealFx .dcount{font-size:14px;color:var(--parchment-dim);font-style:italic}
@@ -566,12 +571,12 @@ function updateAvChips(){
   if(m) m.classList.toggle("off",!musicOn);
   if(x) x.classList.toggle("off",!sfxOn);
 }
-function toggleMusic(){ musicOn=!musicOn;
+function toggleMusic(){ musicOn=!musicOn; savePrefs();
   if(musicOn){ if(musicEl){ musicEl.play().catch(()=>{}); } startMusic(); }
   else stopMusic();
   updateAvChips();
 }
-function toggleSfx(){ sfxOn=!sfxOn; updateAvChips(); }
+function toggleSfx(){ sfxOn=!sfxOn; savePrefs(); updateAvChips(); }
 /* Audio panel: on/off + volume for music and sound effects, independently */
 function confirmMenu(){
   const box=$("modalBox");
@@ -603,10 +608,10 @@ function openAudioPanel(){
   };
   box.appendChild(mkRow("Музыка", ()=>musicOn, ()=>musicVol,
     ()=>toggleMusic(),
-    v=>{ musicVol=v; if(musicGain) musicGain.gain.value=musicVol/100; if(musicEl) musicEl.volume=musicVol/100; }));
+    v=>{ musicVol=v; savePrefs(); if(musicGain) musicGain.gain.value=musicVol/100; if(musicEl) musicEl.volume=musicVol/100; }));
   box.appendChild(mkRow("Эффекты", ()=>sfxOn, ()=>sfxVol,
     ()=>toggleSfx(),
-    v=>{ sfxVol=v; },
+    v=>{ sfxVol=v; savePrefs(); },
     ()=>playSfx("pick")));
   const b=document.createElement("button"); b.className="abtn primary"; b.style.cssText="width:100%;margin-top:6px"; b.textContent="Готово";
   b.onclick=()=>$("modal").classList.remove("on");
@@ -619,7 +624,17 @@ function setSpeed(i,btn){ speedIdx=i;
   if(btn) btn.style.boxShadow="0 0 18px rgba(201,167,95,.6)";
   const chip=document.getElementById("speedChip"); if(chip) chip.textContent="⏱ "+SPEEDS[i].name;
 }
-function cycleSpeed(){ setSpeed((speedIdx+1)%SPEEDS.length); toast("Скорость: "+SPEEDS[speedIdx].name); }
+function savePrefs(){ try{ localStorage.setItem("devantePrefs",
+  JSON.stringify({speedIdx,musicOn,sfxOn,musicVol,sfxVol})); }catch(e){} }
+function loadPrefs(){ try{
+  const p=JSON.parse(localStorage.getItem("devantePrefs")||"{}");
+  if(Number.isInteger(p.speedIdx)&&p.speedIdx>=0&&p.speedIdx<SPEEDS.length) speedIdx=p.speedIdx;
+  if(typeof p.musicOn==="boolean") musicOn=p.musicOn;
+  if(typeof p.sfxOn==="boolean") sfxOn=p.sfxOn;
+  if(Number.isFinite(p.musicVol)) musicVol=Math.max(0,Math.min(100,p.musicVol));
+  if(Number.isFinite(p.sfxVol)) sfxVol=Math.max(0,Math.min(100,p.sfxVol));
+}catch(e){} }
+function cycleSpeed(){ setSpeed((speedIdx+1)%SPEEDS.length); savePrefs(); toast("Скорость: "+SPEEDS[speedIdx].name); }
 
 const DEVANTES = [
   {rank:1,name:"Corium",    img:"devante-1-corium.jpg"},
@@ -983,6 +998,7 @@ async function resolveSpellOnTargets(att,alloc,cardsPlayed,abilityCount){
       log(`💰 <b>${att.name}</b> крадёт у <b>${def.name}</b>: ${names}.`);
       render(); await pause(T("beat"));
     }
+    await settleReplenish(def);
   }
   // amended rule: collect-on-play
   const handBefore=att.hand.length;
@@ -992,7 +1008,7 @@ async function resolveSpellOnTargets(att,alloc,cardsPlayed,abilityCount){
     fxDrawFly(att,drew);
     fxRefund(att,drew);
     log(`<b>${att.name}</b> добирает ${drew} ${ruP(drew,"карту","карты","карт")} — по одной за каждую сыгранную.`);
-    if(att.human) toast(`Возврат +${drew} — по одной за каждую сыгранную карту`);
+    if(att.human) toast(`Восполнено +${drew} — по одной за каждую сыгранную карту`);
     await pause(Math.round(T("beat")*0.8));
     await celebrateFinds(att,drawn);
   }
@@ -1038,10 +1054,11 @@ async function resolveCrystalOnTargets(att,alloc,cardsPlayed,abilityCount){
       if(att.human) reveals.push(def);
       else {
         att.knowledge[S.players.indexOf(def)] = def.hand.filter(c=>c.kind==="devante").length;
-        log(`👁 <b>${att.name}</b> заглядывает в карты <b>${def.name}</b>.`);
+        log(`🔮 <b>${att.name}</b> заглядывает в карты <b>${def.name}</b>.`);
         if(def.human) await showBeingScried(att,def);
       }
     }
+    await settleReplenish(def);
   }
   const handBefore=att.hand.length;
   const drew=drawCards(att,cardsPlayed);
@@ -1050,7 +1067,7 @@ async function resolveCrystalOnTargets(att,alloc,cardsPlayed,abilityCount){
     fxDrawFly(att,drew);
     fxRefund(att,drew);
     log(`<b>${att.name}</b> добирает ${drew} ${ruP(drew,"карту","карты","карт")} — по одной за каждую сыгранную.`);
-    if(att.human) toast(`Возврат +${drew} — по одной за каждую сыгранную карту`);
+    if(att.human) toast(`Восполнено +${drew} — по одной за каждую сыгранную карту`);
     await pause(Math.round(T("beat")*0.8));
     await celebrateFinds(att,drawn);
   }
@@ -1061,7 +1078,7 @@ async function resolveCrystalOnTargets(att,alloc,cardsPlayed,abilityCount){
 function showBeingScried(att,def){
   return new Promise(res=>{
     const box=$("modalBox");
-    box.innerHTML=`<h2>👁 ${att.name} смотрит…</h2>
+    box.innerHTML=`<h2>${att.name} смотрит…</h2>
       <p>Шар проясняется — ваши карты лежат открытыми перед <b>${att.name}</b>.</p>`;
     const mh=document.createElement("div"); mh.className="mini-hand";
     def.hand.forEach(c=>mh.appendChild(cardEl(c)));
@@ -1112,11 +1129,13 @@ function humanDefend(def,att,units,attackType,abilityCount){
     const canDev=devs.length>0 && !def.devUsedTurn;
     if(!canBroom&&!canDev){ log(`Защититься нечем — держитесь.`); res(units); return; }
     const box=$("modalBox");
-    box.innerHTML=`<h2>${att.name} нападает на вас!</h2><p>После ваших щитов остаётся сила атаки: ${units} (${attackType==="spell"?"заклинания":"хрустальный шар"}). Коснитесь карт, которыми хотите защищаться — каждая сыгранная карта возмещается из Добора.</p>`;
+    box.innerHTML=`<h2>${att.name} нападает на вас!</h2><p>Надвигаются ${attackType==="spell"?"кражи":"взоры"}: ${units} (после ваших щитов). Коснитесь карт для защиты — каждая сыгранная карта восполнится из Добора после атаки.</p>`;
     if(canBroom){
       const maxB=Math.min(units,brooms.length);
       let selChar=0, selAsst=-1;
-      const selBrooms=new Set(brooms.slice(0,maxB).map(c=>c.id));   // preselect up to the cap
+      const capNow=()=>{ const asst=selAsst>=0?assts[selAsst]:null;
+        return Math.max(1,Math.min(maxB, Math.ceil(units/multiplier(chars[selChar],asst)))); };
+      const selBrooms=new Set(brooms.slice(0, Math.min(maxB, Math.ceil(units/multiplier(chars[0],null)))).map(c=>c.id));
       const cardRow=(label,cards,isSel,onTap)=>{
         const wrap=document.createElement("div");
         wrap.innerHTML=`<div class="an" style="font-family:Cinzel,serif;font-size:13px;margin:6px 0 2px">${label}</div>`;
@@ -1133,10 +1152,10 @@ function humanDefend(def,att,units,attackType,abilityCount){
       const rows=[];
       rows.push(cardRow("Персонаж",chars,(c,k)=>k===selChar,(c,k)=>{selChar=k;}));
       if(assts.length) rows.push(cardRow("Помощник ×2 — коснитесь, чтобы добавить или убрать",assts,(c,k)=>k===selAsst,(c,k)=>{selAsst=(selAsst===k?-1:k);}));
-      rows.push(cardRow(`Мётлы (не больше ${maxB})`,brooms,(c)=>selBrooms.has(c.id),(c)=>{
+      rows.push(cardRow(`Мётлы`,brooms,(c)=>selBrooms.has(c.id),(c)=>{
         if(selBrooms.has(c.id)) selBrooms.delete(c.id);
-        else if(selBrooms.size<maxB) selBrooms.add(c.id);
-        else toast(`Мётел нельзя сыграть больше, чем входящих краж.`);
+        else if(selBrooms.size<capNow()) selBrooms.add(c.id);
+        else toast(`Больше не нужно — выбранного уже хватает, чтобы отразить всё.`);
       }));
       function repaint(){
         rows[0].mh.childNodes.forEach((el,k)=>el.classList.toggle("sel",k===selChar));
@@ -1156,9 +1175,11 @@ function humanDefend(def,att,units,attackType,abilityCount){
         return {asst,v,cancel,spentN};
       };
       function refresh(){
+        const cap=capNow();
+        if(selBrooms.size>cap){ for(let i=brooms.length-1;i>=0&&selBrooms.size>cap;i--) selBrooms.delete(brooms[i].id); repaint(); }
         const {v,cancel,spentN}=calc();
-        summary.innerHTML=`Отобьёт <b>${cancel}</b> из ${units} · вернётся карт: <b>${spentN}</b>`;
-        go.textContent=v? `Отбиться — отразить ${cancel}` : `Выберите хотя бы одну метлу`;
+        summary.innerHTML=`Отразит <b>${cancel}</b> из ${units} ${attackType==="spell"?ruP(units,"кражи","краж","краж"):"взоров"} · восполнится: <b>${spentN}</b>`;
+        go.textContent=v? `Отразить ${cancel}` : `Выберите хотя бы одну метлу`;
         go.disabled=!v;
       }
       refresh();
@@ -1167,25 +1188,26 @@ function humanDefend(def,att,units,attackType,abilityCount){
         if(!v) return;
         const spent=[chars[selChar],...(asst?[asst]:[]),...brooms.filter(c=>selBrooms.has(c.id))];
         removeFromHand(def,spent); toDiscard(spent);
-        const drew=drawCards(def,spent.length);
-        fxDrawFly(def,drew);
-        fxRefund(def,drew);
-        toast(`Возврат +${drew} из Добора — по одной за каждую карту защиты`);
+        def._pendingRefund=(def._pendingRefund||0)+spent.length;
         playSfx("broom");
         fxSweep(boxOf(def));
-        log(`🧹 Вы отбиваетесь: мётлы (${v})${asst?" + "+asst.name+" ×2":""} + ${chars[selChar].name} — отражено: ${cancel}, возвращено: ${drew}.`);
+        log(`🧹 Вы отражаете ${cancel} из ${units}: мётлы (${v})${asst?" + "+asst.name+" ×2":""} + ${chars[selChar].name}. Восполнение — после атаки.`);
         $("modal").classList.remove("on"); render();
-        await celebrateFinds(def,drew);
         res(units-cancel);
       };
     }
     if(canDev){
-      const b=document.createElement("button");b.className="abtn";b.style.width="100%";b.style.marginTop="8px";
-      b.textContent=`Отразить всё картой Деванте (она сгорит)`;
+      const lowDev=devs.slice().sort((a,b)=>b.rank-a.rank)[0];
+      const prev=document.createElement("div"); prev.className="mini-hand"; prev.style.cssText="justify-content:center;padding-top:16px";
+      const pc=cardEl(lowDev); pc.classList.add("shimmer"); pc.style.cursor="default"; prev.appendChild(pc);
+      box.appendChild(prev);
+      const b=document.createElement("button");b.className="abtn";b.style.width="100%";b.style.marginTop="4px";
+      b.textContent=`Отразить всё младшей картой Деванте (${lowDev.name})`;
       b.onclick=()=>{
-        const d=devs.sort((a,b)=>b.rank-a.rank)[0];
+        const d=lowDev;
         removeFromHand(def,[d]); toBurn([d]); def.devUsedTurn=true;
         const drew=drawCards(def,2);
+        fxDrawFly(def,drew);
         log(`📕 Вы жертвуете <b>${d.name}</b> как метлу — атака отражена, взято карт: ${drew}.`);
         $("modal").classList.remove("on"); render();
         showDevanteDrama("Вы", d, `жертвуете <b>${d.name}</b> — атака отражена! (+${drew} ${ruP(drew,"карта","карты","карт")})`).then(()=>celebrateFinds(def,drew)).then(()=>res(0));
@@ -1209,6 +1231,7 @@ async function aiDefend(def,att,units,attackType,abilityCount){
     const d=devs.sort((a,b)=>b.rank-a.rank)[0];
     removeFromHand(def,[d]); toBurn([d]); def.devUsedTurn=true;
     const drew=drawCards(def,2);
+    fxDrawFly(def,2);
     log(`📕 <b>${def.name}</b> жертвует <b>${d.name}</b> как метлу — атака отражена (+${drew}).`);
     await showDevanteDrama(def.name, d, `жертвует <b>${d.name}</b> — атака отражена!`);
     return 0;
@@ -1220,13 +1243,11 @@ async function aiDefend(def,att,units,attackType,abilityCount){
     const cancel=Math.min(v*multiplier(chars[0],asst),units);
     const spent=[chars[0],...(asst?[asst]:[]),...brooms.slice(0,v)];
     removeFromHand(def,spent); toDiscard(spent);
-    const drew=drawCards(def,spent.length);
-    fxDrawFly(def,drew);
-    fxRefund(def,drew);
+    def._pendingRefund=(def._pendingRefund||0)+spent.length;
     playSfx("broom");
     fxSweep(boxOf(def));
-    log(`🧹 <b>${def.name}</b> отбивается: мётлы (${v})${asst?" + "+asst.name+" ×2":""} — отражено: ${cancel} (добрано: ${drew}).`);
-    await showPlay(def.name, `отбивается — мётлы (${v})${asst?", удвоено: "+asst.name:""}`, spent);
+    log(`🧹 <b>${def.name}</b> отражает ${cancel}: мётлы (${v})${asst?" + "+asst.name+" ×2":""}.`);
+    await showPlay(def.name, `отражает ${cancel} — мётлы (${v})${asst?", удвоено: "+asst.name:""}`, spent);
     return units-cancel;
   }
   return units;
@@ -1281,6 +1302,7 @@ function devanteMenu(card){
     if(me.devUsedTurn){toast("Только одна Деванте за ход.");return;}
     removeFromHand(me,[card]); toBurn([card]); me.devUsedTurn=true; S.sel.clear();
     const drew=drawCards(me,2);
+    fxDrawFly(me,drew);
     log(`📕 Вы жертвуете <b>${card.name}</b> как метлу и берёте ${drew} ${ruP(drew,"карту","карты","карт")}.`);
     $("modal").classList.remove("on");
     showDevanteDrama("You", card, `жертвуете <b>${card.name}</b> как метлу — +${drew} ${ruP(drew,"карта","карты","карт")}`).then(()=>celebrateFinds(me,drew)).then(()=>endTurn());
@@ -1460,9 +1482,11 @@ function inspectCard(c){
   box.appendChild(b);
   $("modal").classList.add("on");
 }
+function closeChronicle(){ $("modal").classList.remove("on"); $("modal").onclick=null; }
 function showFullLog(){
   const box=$("modalBox");
-  box.innerHTML=`<h2>Летопись</h2><div id="logFull">${S.log.slice(-60).map(l=>`<div>${l}</div>`).join("")}</div>`;
+  box.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><h2 style="margin:0">Летопись</h2><button class="abtn danger" style="padding:6px 14px" onclick="closeChronicle()">✕</button></div><div id="logFull">${S.log.slice(-60).map(l=>`<div>${l}</div>`).join("")}</div>`;
+  $("modal").onclick=e=>{ if(e.target&&e.target.id==="modal") closeChronicle(); };
   const b=document.createElement("button");b.className="abtn primary";b.style.cssText="width:100%;margin-top:10px";b.textContent="Закрыть";
   b.onclick=()=>$("modal").classList.remove("on");
   box.appendChild(b);$("modal").classList.add("on");
@@ -1547,13 +1571,22 @@ function dealAnimation(){
   });
 }
 /* a glowing REFUND +N tag rises from the Collect pile toward whoever earned it */
+async function settleReplenish(def){
+  if(!def._pendingRefund) return;
+  const nR=def._pendingRefund; def._pendingRefund=0;
+  const dr=drawCards(def,nR);
+  fxDrawFly(def,dr); fxRefund(def,dr);
+  log(`<b>${def.name}</b> восполняет из Добора: ${dr} — по одной за каждую карту защиты.`);
+  if(def.human){ toast(`Восполнено +${dr} — по одной за каждую карту защиты`); render(); await celebrateFinds(def,dr); }
+  render(); await pause(Math.round(T("beat")*0.7));
+}
 function fxSteal(att,def,n){
   try{
     if(!n) return;
     const from=centerOf(boxOf(def)), to=centerOf(boxOf(att));
     const d=document.createElement("div"); d.className="fx-refund";
     d.style.color="#e0917f"; d.style.textShadow="0 0 12px rgba(179,64,47,.95),0 2px 4px rgba(0,0,0,.8)";
-    d.textContent="✋ УКРАДЕНО +"+n;
+    d.textContent="УКРАДЕНО +"+n;
     d.style.cssText+=`left:${from.x-40}px;top:${from.y-14}px;opacity:0`;
     document.body.appendChild(d);
     requestAnimationFrame(()=>{ d.style.opacity="1";
@@ -1569,7 +1602,7 @@ function fxRefund(p,n){
     const from=centerOf(document.querySelector("#collectPile .pile-card"));
     const to=centerOf(boxOf(p));
     const d=document.createElement("div"); d.className="fx-refund";
-    d.textContent="⟲ ВОЗВРАТ +"+n;
+    d.textContent="⟲ ВОСПОЛНЕНО +"+n;
     d.style.cssText+=`left:${from.x-40}px;top:${from.y-14}px;opacity:0`;
     document.body.appendChild(d);
     requestAnimationFrame(()=>{ d.style.opacity="1";
@@ -1677,13 +1710,18 @@ async function pickStealCards(att,def,n){
   return stolen;
 }
 function buildFan(count){
-  const row=document.createElement("div"); row.id="fanRow"; const cards=[];
+  const wrap=document.createElement("div"); wrap.className="fan-wrap";
+  const scroller=document.createElement("div"); scroller.id="fanRow";
+  const inner=document.createElement("div"); inner.className="fan-inner";
+  const cards=[];
   for(let i=0;i<count;i++){
     const fc=cardBackEl("fan-card");
     fc.style.transform=`rotate(${(i-(count-1)/2)*3}deg)`;
-    row.appendChild(fc); cards.push(fc);
+    inner.appendChild(fc); cards.push(fc);
   }
-  return {row,cards};
+  scroller.appendChild(inner); wrap.appendChild(scroller);
+  setTimeout(()=>{ try{ if(scroller.scrollWidth>scroller.clientWidth+4) wrap.classList.add("scrollable"); }catch(e){} },120);
+  return {row:wrap,cards};
 }
 function flipFanCard(el,card){
   el.classList.add("flipped");
@@ -1724,31 +1762,50 @@ function fanPickWatch(att,def,n){
     const mapping=shuffle([...def.hand]);
     const box=$("modalBox");
     box.innerHTML=`<h2>${att.name} тянется к вашим картам…</h2>
-      <p>Ваша рука раскрыта веером рубашками вверх. ${att.name} выбирает: ${n}.</p>`;
+      <p>Ваша рука раскрыта веером рубашками вверх. ${att.name} выбирает: ${n}.</p>
+      <p style="text-align:center;font-size:10px;letter-spacing:.2em;color:var(--bronze);text-transform:uppercase;margin-top:-6px">коснитесь, чтобы пропустить</p>`;
     const {row,cards}=buildFan(mapping.length);
     box.appendChild(row);
     $("modal").classList.add("on");
-    const stolen=[]; let k=0;
-    const pickOne=()=>{
-      const avail=cards.map((el,i)=>({el,i})).filter(x=>!x.el.classList.contains("flipped"));
-      // cards are face-down: the pick is blind — uniformly random, no favouritism
-      const pick=avail[Math.floor(Math.random()*avail.length)];
-      pick.el.classList.add("aipick");
-      setTimeout(()=>{
+    const stolen=[]; let k=0; let skipped=false;
+    box.onclick=()=>{ skipped=true; };
+    const close=(delay)=>{ box.onclick=null; setTimeout(()=>{ $("modal").classList.remove("on"); res(stolen); }, delay); };
+    const finishFast=()=>{
+      while(k<n){
+        const avail=cards.map((el,i)=>({el,i})).filter(x=>!x.el.classList.contains("flipped"));
+        if(!avail.length) break;
+        const pick=avail[Math.floor(Math.random()*avail.length)];   // face-down: blind and uniformly random
         const card=mapping[pick.i];
         def.hand=def.hand.filter(c=>c.id!==card.id);
-        stolen.push(card);
+        stolen.push(card); k++;
+        flipFanCard(pick.el,card);
+        if(card.kind==="devante") pick.el.classList.add("shimmer");
+      }
+      playSfx("pick");
+      close(420);
+    };
+    const pickOne=()=>{
+      if(skipped){ finishFast(); return; }
+      const avail=cards.map((el,i)=>({el,i})).filter(x=>!x.el.classList.contains("flipped"));
+      if(!avail.length||k>=n){ close(Math.round(T2("reveal")*0.8)); return; }
+      const pick=avail[Math.floor(Math.random()*avail.length)];   // face-down: blind and uniformly random
+      pick.el.classList.add("aipick");
+      setTimeout(()=>{
+        if(skipped){ finishFast(); return; }
+        const card=mapping[pick.i];
+        def.hand=def.hand.filter(c=>c.id!==card.id);
+        stolen.push(card); k++;
         playSfx("pick");
         flipFanCard(pick.el,card);
-        pick.el.classList.add("big");   // the stolen card looms large so you see what you lose
+        pick.el.classList.add("big");
         if(card.kind==="devante"){ pick.el.classList.add("shimmer"); playSfx("devante-stolen"); }
         if(card.kind==="dragon") playSfx("dragon-found");
-        setTimeout(()=>{ pick.el.classList.remove("big"); setTimeout(()=>fxFlyToRival(pick.el,att),240); }, Math.round(T("beat")*1.5));
-        k++;
-        if(k<n) setTimeout(pickOne, Math.round(T("beat")*2.1));
-        else setTimeout(()=>{$("modal").classList.remove("on");res(stolen);}, Math.round(T("reveal")*1.2));
-      }, Math.round(T("beat")*0.5));
+        setTimeout(()=>{ pick.el.classList.remove("big"); setTimeout(()=>fxFlyToRival(pick.el,att),200); }, Math.round(T2("beat")*0.8));
+        if(k<n) setTimeout(pickOne, Math.round(T2("beat")*1.2));
+        else close(Math.round(T2("reveal")*0.8));
+      }, Math.round(T2("beat")*0.35));
     };
+    const T2=T3=>T(T3);
     pickOne();
   });
 }
@@ -1788,7 +1845,7 @@ function humanTapDraw(){
 
 async function beginTurn(){
   const p=S.players[S.turn];
-  p.devUsedTurn=false;
+  S.players.forEach(pl=>pl.devUsedTurn=false);
   if(!S.collect.length){ return gameOver("Добор опустел."); }
   if(p.human){
     await humanTapDraw();
@@ -1826,9 +1883,10 @@ async function aiTurn(p){
   const potionChar=chars.find(c=>c.traits.includes("potion"));
   // pick a victim: known devante holder > most cards
   const rivals=S.players.map((pl,i)=>({pl,i})).filter(x=>x.i!==idx);
+  const kscore=x=>{ const k=p.knowledge[x.i]; return k===undefined?0.5:(k>0?1+k:0); }; // scried-empty rivals matter least
   rivals.sort((a,b)=>{
-    const ka=p.knowledge[a.i]||0, kb=p.knowledge[b.i]||0;
-    if(kb!==ka)return kb-ka;
+    const d=kscore(b)-kscore(a);
+    if(d) return d;
     return b.pl.hand.length-a.pl.hand.length;
   });
   const victim=rivals[0];
@@ -1864,9 +1922,14 @@ async function aiTurn(p){
     const units=use.length*multiplier(spellChar,asst);
     const played=[spellChar,...(asst?[asst]:[]),...use];
     removeFromHand(p,played); toDiscard(played);
-    const alloc={}; alloc[victim.i]=units;
+    const alloc={};
+    if(units>=3 && rivals.length>=2 && Math.random()<0.4){
+      const first=Math.max(1,Math.ceil(units*0.6));
+      alloc[victim.i]=first; alloc[rivals[1].i]=units-first;
+    } else alloc[victim.i]=units;
     render();
-    await showPlay(p.name, `нападает на <b>${victim.pl.name}</b> — заклинания (${use.length}) с ${spellChar.name}${asst?" и "+asst.name:""}, сила: ${units}`, played);
+    const tNames=Object.keys(alloc).map(i=>S.players[+i].name);
+    await showPlay(p.name, `нападает на <b>${tNames.join("</b> и <b>")}</b> — заклинания (${use.length}) с ${spellChar.name}${asst?" и "+asst.name:""}, сила: ${units}`, played);
     await resolveSpellOnTargets(p,alloc,played.length,use.length);
     return;
   }
@@ -1875,9 +1938,13 @@ async function aiTurn(p){
     const use=balls.slice(0,Math.min(2,balls.length));
     const played=[crystalChar,...use];
     removeFromHand(p,played); toDiscard(played);
-    const alloc={}; alloc[victim.i]=use.length;
+    const alloc={};
+    if(use.length>=2 && rivals.length>=2 && Math.random()<0.5){
+      alloc[victim.i]=use.length-1; alloc[rivals[1].i]=1;
+    } else alloc[victim.i]=use.length;
     render();
-    await showPlay(p.name, `наводит шар на <b>${victim.pl.name}</b> с ${crystalChar.name}`, played);
+    const tNames=Object.keys(alloc).map(i=>S.players[+i].name);
+    await showPlay(p.name, `наводит шар на <b>${tNames.join("</b> и <b>")}</b> с ${crystalChar.name}`, played);
     await resolveCrystalOnTargets(p,alloc,played.length,use.length);
     return;
   }
@@ -1931,7 +1998,7 @@ const TUT_STEPS=[
   hint:`Выберите Diamone и обе карты хрустального шара.`,
   done:`Один шар разбил зелье, второй открыл руку соперника — знание решает, кого грабить. С несколькими шарами можно заглянуть к нескольким соперникам за один ход.`},
  {expect:"defend", hand:[["character","Naldy"],["character","Smookers"],["ability","broomstick"],["ability","broomstick"],["object","Forgotten Goblet"]], rivalCount:4,
-  text:`Защита! Соперник сейчас нападёт на вас двумя заклинаниями. Появится окно, где <b>вы сами выбираете защитников</b>: укажите <b>Naldy</b>, задайте число мётел — и заметьте, что можно добавить <b>Smookers</b>, чтобы удвоить каждую метлу. Каждая сыгранная в защите карта возмещается из Добора. Защита не тратит ваш ход.`,
+  text:`Защита! Соперник сейчас нападёт на вас двумя заклинаниями. Появится окно, где <b>вы сами выбираете защитников</b>: укажите <b>Naldy</b>, задайте число мётел — и заметьте, что можно добавить <b>Smookers</b>, чтобы удвоить каждую метлу. Каждая сыгранная в защите карта восполняется из Добора. Защита не тратит ваш ход.`,
   script:async()=>{
     S.busy=true; render();
     const rival=S.players[1];
@@ -2062,6 +2129,8 @@ async function gameOver(reason){
   vd.appendChild(b);
   setTimeout(()=>box.scrollTo({top:box.scrollHeight,behavior:"smooth"}),150);
 }
+
+loadPrefs(); setSpeed(speedIdx); updateAvChips();
 </script>
 <span id="menuChip" onclick="confirmMenu()"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#c9a75f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block"><path d="M4 21V11c0-4.4 3.6-8 8-8s8 3.6 8 8v10"/><path d="M9 21v-5c0-1.7 1.3-3 3-3s3 1.3 3 3v5"/><path d="M2 21h20"/></svg></span>
 </body>
