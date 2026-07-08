@@ -1998,38 +1998,30 @@ function mk(kind,name){
   const t=OBJECTS.find(o=>o.name===name)||OBJECTS[0];return {id:++uid,kind:"object",...t};
 }
 const TUT_STEPS=[
- {expect:null, text:`Добро пожаловать в «<b>Деванте</b>»! Цель — держать в руке больше всех <b>карт Деванте</b> к концу игры. Каждый ход вы берёте карту, затем делаете <b>один ход</b>. Разберём все ходы по очереди.`},
  {expect:null,
-  intro:async()=>{
-    await showPlay("Карты персонажей","делают ваши ходы — парящие медальоны показывают их способности",[mk("character","Mason")]);
-    await showPlay("Карты способностей","питают ход силой — их значок должен совпадать со значком персонажа. Зелья подчиняются только Odorf, хрустальные шары — только Diamone",[mk("ability","spell"),mk("ability","broomstick"),mk("ability","crystal"),mk("ability","potion")]);
-    await showPlay("Помощники","присоединяются к персонажу и удваивают весь ход",[mk("character","Getergrin")]);
-    playSfx("found");
-    await showPlay("Карты Деванте","✨ сами сокровища — соберите больше всех, чтобы победить",[mk("devante","Aurum")]);
-  },
-  text:`Это главные карты игры. Карты-предметы — просто хлам для сброса, а редкий <b>Дракон</b> возвращает себя четырёхкратно из Добора. А теперь — играем.`},
- {expect:"discard", hand:[["object","Dusty Candelabra"],["object","Forgotten Goblet"],["object","Blank Parchment"],["ability","broomstick"]],
-  text:`Простейший ход: <b>сбросить одну карту</b>. У предметов нет свойств — это хлам (и удобная приманка для воров вместо ваших сокровищ). Коснитесь <b>Dusty Candelabra</b>, затем нажмите <b>Сбросить</b>.`,
-  hint:`Коснитесь карты-предмета, затем кнопки «Сбросить».`,
-  done:`Вот и весь ход: взяли карту — сделали один ход. Заметьте: сброс ничего не приносит. Карты добираются только за ходы <b>против соперника</b>. Это — дальше.`},
- {expect:"spell", hand:[["character","Mason"],["ability","spell"],["object","Forgotten Goblet"]], rivalCount:5,
-  text:`<b>Атака заклинанием</b>. Карты способностей работают только с персонажем, несущим тот же значок. У Mason есть значок заклинания — выберите <b>Mason</b> и карту <b>Заклинание</b>, нажмите кнопку атаки и назначьте её Сопернику. Его карты раскроются веером — выбирайте добычу!`,
-  hint:`Выберите Mason и карту заклинания вместе, затем нажмите атаку.`,
-  done:`Вы украли карту — и затем взяли <b>2 из Добора</b>: по одной за каждую сыгранную карту (Mason + заклинание). Ходы против соперников всегда возмещаются так. Сброс — никогда.`},
+  intro:async()=>{ playSfx("found");
+    await showPlay("Деванте","✨ держите таких больше всех, когда Добор иссякнет — и победа ваша",[mk("devante","Aurum")]); },
+  text:`Вот и вся игра: <b>копите книги заклинаний</b>. Готовы ограбить Ведьму?`},
+ {expect:"spell", hand:[["character","Mason"],["ability","spell"],["object","Forgotten Goblet"]],
+  rivalHand:[["object","Dusty Candelabra"],["object","Blank Parchment"],["object","Forgotten Goblet"],["devante","Rosea"]],
+  text:`Ведьма прячет <b>Деванте</b>. Коснитесь <b>Mason + Заклинание</b>, атакуйте — и выбирайте добычу.`,
+  hint:`Выберите Mason и Заклинание вместе, затем атакуйте.`,
+  done:`Удар! И 2 карты вернулись к вам — каждая карта, сыгранная <b>против соперника</b>, восполняется.`},
+ {expect:"discard", hand:[["object","Dusty Candelabra"],["object","Forgotten Goblet"],["object","Blank Parchment"]],
+  text:`Пустая рука? Предметы — хлам. <b>Сбросьте один</b> и пропустите ход.`,
+  hint:`Коснитесь предмета, затем «Сбросить».`,
+  done:`Безболезненно — но сбросы не восполняются. Атаки — да.`},
  {expect:"spell", hand:[["character","Fairy Queen"],["character","Getergrin"],["ability","spell"],["object","Dusty Candelabra"]], rivalCount:6,
-  text:`Множители! <b>Fairy Queen</b> — <b>продвинутый персонаж ×2</b>, а помощник <b>Getergrin</b> удваивает ещё раз. Выберите всех троих: Fairy Queen + Getergrin + заклинание — одна карта превращается в <b>4 кражи</b>. С несколькими заклинаниями кражи можно даже делить между разными соперниками.`,
-  hint:`Выберите Fairy Queen, Getergrin И карту заклинания, затем атакуйте.`,
-  done:`Одно заклинание — четыре карты: ×2 за продвинутого персонажа и ×2 за помощника. И вы добрали ещё 3 за сыгранные карты. Помощники не ходят в одиночку, и только один — за ход.`},
- {expect:"crystal", hand:[["character","Diamone"],["ability","crystal"],["ability","crystal"],["object","Blank Parchment"]], rivalCount:5, rivalShield:1,
-  intro:async()=>{
-    playSfx("crystal");
-    await showPlay("Diamone","только она владеет хрустальным шаром — смотрите, как он летит к ней",[mk("character","Diamone"),mk("ability","crystal")]);
-  },
-  text:`Шпионаж. Только <b>Diamone</b> может играть <b>хрустальные шары</b>. У Соперника стоит щит из зелья (зелёная точка) — щиты гасят силу взора первыми, так что нужна лишняя единица, чтобы увидеть карты. Выберите Diamone и <b>оба</b> шара — и наведите взор на Соперника.`,
-  hint:`Выберите Diamone и обе карты хрустального шара.`,
-  done:`Один шар разбил зелье, второй открыл руку соперника — знание решает, кого грабить. С несколькими шарами можно заглянуть к нескольким соперникам за один ход.`},
+  text:`<b>Fairy Queen ×2</b>. <b>Getergrin ×2</b>. Одно Заклинание → <b>4 кражи</b>. Выберите всех троих и атакуйте.`,
+  hint:`Fairy Queen + Getergrin + Заклинание.`,
+  done:`Четыре за одну. Продвинутый персонаж и помощник — каждый удваивает ход.`},
+ {expect:"crystal", hand:[["character","Diamone"],["ability","crystal"],["ability","crystal"],["object","Blank Parchment"]], rivalShield:1,
+  rivalHand:[["object","Dusty Candelabra"],["object","Forgotten Goblet"],["devante","Caeruleum"],["object","Blank Parchment"]],
+  text:`Под щитом и довольна собой. Хрустальным шаром владеет лишь <b>Diamone</b> — один сожжёт щит, второй откроет её карты.`,
+  hint:`Diamone + оба Хрустальных шара.`,
+  done:`Знание — та же добыча: теперь вы знаете, кого грабить.`},
  {expect:"defend", hand:[["character","Naldy"],["character","Smookers"],["ability","broomstick"],["ability","broomstick"],["object","Forgotten Goblet"]], rivalCount:4,
-  text:`Защита! Соперник сейчас нападёт на вас двумя заклинаниями. Появится окно, где <b>вы сами выбираете защитников</b>: укажите <b>Naldy</b>, задайте число мётел — и заметьте, что можно добавить <b>Smookers</b>, чтобы удвоить каждую метлу. Каждая сыгранная в защите карта восполняется из Добора. Защита не тратит ваш ход.`,
+  text:`Её ход — <b>держитесь!</b> Когда откроется окно, выберите защитников. Попробуйте <b>Smookers</b>: помощник удваивает каждую метлу.`,
   script:async()=>{
     S.busy=true; render();
     const rival=S.players[1];
@@ -2039,20 +2031,16 @@ const TUT_STEPS=[
     await resolveSpellOnTargets(rival,{0:2},3,2);
     S.busy=false; tutActionDone();
   },
-  done:`Мётлы — только для защиты: их нельзя сыграть больше, чем входящих краж; помощник удваивает то, что отражает каждая метла; и они бессильны против Деванте.`},
+  done:`Отражено — и каждая карта защиты восполнена после. Защита не тратит ваш ход.`},
  {expect:"potion", hand:[["character","Odorf"],["ability","potion"],["ability","potion"],["object","Blank Parchment"]], rivalCount:5,
-  intro:async()=>{
-    playSfx("potion");
-    await showPlay("Odorf","только она варит зелья — хранительница щитов",[mk("character","Odorf"),mk("ability","potion")]);
-  },
-  text:`Постоянная защита. Только <b>Odorf</b> повелевает <b>зельями</b>. Выберите Odorf и оба зелья и нажмите <b>Поставить щит из зелий</b> — они лягут перед вами, и каждая атака сперва должна прожечь их. Добавить зелья позже нельзя.`,
-  hint:`Выберите Odorf и обе карты зелий, затем поставьте щит.`,
-  done:`Под щитом! Теперь каждый удар уничтожает зелье вместо вас. Когда лопнет последнее, Odorf уйдёт в Сброс вместе с ними — а Сброс в этой игре не перемешивается, ушедшие карты не возвращаются.`},
- {expect:"devante", hand:[["devante","Corium"],["object","Forgotten Goblet"],["object","Dusty Candelabra"]], rivalCount:5,
-  text:`Сами сокровища. <b>Карте Деванте</b> не нужен персонаж, и её мощь огромна: как заклинание она крадёт <b>8 карт у кого угодно</b>; как шар — открывает <b>все руки</b>; как метла — отражает <b>любую</b> атаку; как зелье — встаёт <b>щитом на 4 удара</b>; как Крушитель щитов — <b>разбивает все щиты</b> соперника разом. Но сыгранная карта сгорает навсегда — минус очко. Отразить её может лишь Деванте старшего ранга, а <b>Corium — ранг 1</b>, неудержим. Коснитесь Corium и попробуйте его как заклинание.`,
-  hint:`Коснитесь карты Corium, затем «Сыграть Деванте…».`,
-  done:`Могуче — но сокровище сгорело. Одна Деванте за ход, в атаке или защите. Копите их и тратьте лишь тогда, когда выигрыш больше цены.`},
- {expect:null, text:`Вот и всё! Игра кончается, когда <b>пустеет Добор</b>. Побеждает тот, у кого больше карт Деванте; при ничьей — старший ранг: Corium, ранг 1, бьёт всех. Деванте достаются тремя путями: стартовая рука, <b>добор</b> из колоды и <b>кража</b>.<br><br>Подсказки: <b>двойное касание</b> — рассмотреть карту · кнопки с <b>нотой и динамиком</b> открывают панель звука · <b>⏱</b> меняет скорость игры. Удачи!`, finale:true},
+  text:`Постройте стену: <b>Odorf + Зелья</b>, затем «Поставить щит». Атаки жгут зелья, не касаясь вас.`,
+  hint:`Odorf + оба Зелья → «Поставить щит из зелий».`,
+  done:`Под защитой. Когда лопнет последнее зелье, Odorf уйдёт в Сброс — навсегда.`},
+ {expect:"devante", hand:[["devante","Corium"],["object","Forgotten Goblet"],["object","Dusty Candelabra"]], rivalCount:6,
+  text:`А теперь — сама сила. Обрушьте <b>Corium как Заклинание — 8 краж</b>. Потом он сгорит… но какова добыча!`,
+  hint:`Corium → «Сыграть Деванте» → «Как заклинание».`,
+  done:`Опустошение. Одна Деванте за ход · отразит её лишь старший ранг · сыгранные книги <b>сгорают</b>. Копите — и тратьте лишь ради большего.`},
+ {expect:null, text:`Вы знаете всё, что важно. Добор пуст → больше Деванте — победа → при ничьей решает ранг.<br><br><b>Двойное касание</b> — рассмотреть карту · нота и динамик — звук · <b>⏱</b> — скорость. В бой!`, finale:true},
 ];
 function startTutorial(){
   S={players:[
@@ -2080,12 +2068,13 @@ async function tutNext(){
   if(!st){ location.reload(); return; }
   const me=S.players[0], rival=S.players[1];
   me.hand=(st.hand||[]).map(a=>mk(a[0],a[1])); me.shield=null; me.devUsedTurn=false;
-  rival.hand=Array.from({length:st.rivalCount||0},(_,i)=>mk("object",OBJECTS[i%3].name));
+  rival.hand=st.rivalHand? st.rivalHand.map(a=>mk(a[0],a[1])) : Array.from({length:st.rivalCount||0},(_,i)=>mk("object",OBJECTS[i%3].name));
   rival.shield=st.rivalShield?{charCard:mk("character","Odorf"),charName:"Odorf",devante:false,asst:null,
     potions:Array.from({length:st.rivalShield},()=>({card:mk("ability","potion"),hits:1}))}:null;
   S.sel.clear(); S.busy=false; S.turn=0; render();
+  try{ const tt=document.querySelector("#tutPanel .tt"); if(tt) tt.textContent="Обучение"+" · "+(TUT.i+1)+"/"+TUT_STEPS.length; }catch(e){}
   if(st.intro){ S.busy=true; render(); await st.intro(); S.busy=false; render(); }
-  if(st.expect===null) tutPanelShow(st.text, st.finale?"Завершить — в меню":"Продолжить", ()=>tutNext());
+  if(st.expect===null) tutPanelShow(st.text, st.finale?"В бой!":"Продолжить", ()=>tutNext());
   else { tutPanelShow(st.text); if(st.script) st.script(); }
 }
 function tutActionDone(){

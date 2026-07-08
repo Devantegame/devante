@@ -1995,61 +1995,49 @@ function mk(kind,name){
   const t=OBJECTS.find(o=>o.name===name)||OBJECTS[0];return {id:++uid,kind:"object",...t};
 }
 const TUT_STEPS=[
- {expect:null, text:`Welcome to <b>Devante</b>! The goal: hold the most <b>Devante cards</b> when the game ends. On each turn you draw one card, then make <b>one play</b>. Let's learn every play, one at a time.`},
  {expect:null,
-  intro:async()=>{
-    await showPlay("Character Cards","make your plays — the floating medallions show which abilities each commands",[mk("character","Mason")]);
-    await showPlay("Ability Cards","power the play — their icon must match the Character's. Potions answer only to Odorf, Crystal Balls only to Diamone",[mk("ability","spell"),mk("ability","broomstick"),mk("ability","crystal"),mk("ability","potion")]);
-    await showPlay("Assistant Cards","join a Character to double the whole play",[mk("character","Getergrin")]);
-    playSfx("found");
-    await showPlay("Devante Cards","✨ the treasures themselves — hold the most to win",[mk("devante","Aurum")]);
-  },
-  text:`Those are the cards that matter most. Object cards are mere dross for discarding, and the rare <b>Dragon</b> refunds itself fourfold from the Collect pile. Now — let's play.`},
- {expect:"discard", hand:[["object","Dusty Candelabra"],["object","Forgotten Goblet"],["object","Blank Parchment"],["ability","broomstick"]],
-  text:`The simplest play: <b>discard one card</b>. Object cards have no powers — they're clutter (and handy chaff for thieves to steal instead of your treasures). Tap the <b>Dusty Candelabra</b>, then tap <b>Discard</b>.`,
-  hint:`Tap one Object card, then the Discard button.`,
-  done:`That's a whole turn: draw, then one play. Note: discarding earns you nothing — you only collect cards when you play <b>against a rival</b>. That's next.`},
- {expect:"spell", hand:[["character","Mason"],["ability","spell"],["object","Forgotten Goblet"]], rivalCount:5,
-  text:`The <b>Spell attack</b>. Ability cards only work with a Character who bears the matching icon. Mason bears the Spell icon — tap <b>Mason</b> and the <b>Spell</b> card, then <b>Cast 1 Spell</b>, and assign it to your Rival. You'll fan out their hand and pick your plunder!`,
-  hint:`Select Mason + the Spell card together, then tap Cast.`,
-  done:`You stole a card — and then drew <b>2 from the Collect pile</b>, one for each card you played (Mason + the Spell). Playing against rivals always refunds you like this. Discarding never does.`},
+  intro:async()=>{ playSfx("found");
+    await showPlay("The Devante","✨ hold the most of these when the Collect pile runs dry — and win",[mk("devante","Aurum")]); },
+  text:`That's the whole game: <b>hoard the spellbooks</b>. Ready to rob a Witch?`},
+ {expect:"spell", hand:[["character","Mason"],["ability","spell"],["object","Forgotten Goblet"]],
+  rivalHand:[["object","Dusty Candelabra"],["object","Blank Parchment"],["object","Forgotten Goblet"],["devante","Rosea"]],
+  text:`The Witch is hiding a <b>Devante</b>. Tap <b>Mason + Spell</b>, then attack — and pick your plunder.`,
+  hint:`Select Mason and the Spell together, then hit attack.`,
+  done:`Struck! And 2 cards flew back to you — every card played <b>against a rival</b> is replenished.`},
+ {expect:"discard", hand:[["object","Dusty Candelabra"],["object","Forgotten Goblet"],["object","Blank Parchment"]],
+  text:`Dead hand? Objects are dross. <b>Discard one</b> to pass.`,
+  hint:`Tap an Object, then Discard.`,
+  done:`Painless — but discards are never replenished. Attacks are.`},
  {expect:"spell", hand:[["character","Fairy Queen"],["character","Getergrin"],["ability","spell"],["object","Dusty Candelabra"]], rivalCount:6,
-  text:`Multipliers! The <b>Fairy Queen</b> is <b>Advanced ×2</b>, and <b>Getergrin</b> is an Assistant who doubles it again. Select all three: Fairy Queen + Getergrin + the Spell — one spell card becomes <b>4 steals</b>. With several spells you could even split the units between different rivals.`,
-  hint:`Select Fairy Queen, Getergrin AND the Spell card, then Cast.`,
-  done:`One spell, four cards — ×2 for Advanced, ×2 again for the Assistant. And you collected 3 more for the cards you played. Assistants can never be played alone, and only one per play.`},
- {expect:"crystal", hand:[["character","Diamone"],["ability","crystal"],["ability","crystal"],["object","Blank Parchment"]], rivalCount:5, rivalShield:1,
-  intro:async()=>{
-    playSfx("crystal");
-    await showPlay("Diamone","only she commands the Crystal Ball — watch it fly to her side",[mk("character","Diamone"),mk("ability","crystal")]);
-  },
-  text:`Spying. Only <b>Diamone</b> can use <b>Crystal Balls</b>. Your Rival has a potion shield (see the green pip) — shields eat your crystal units first, so you need a spare unit to see through. Select Diamone + <b>both</b> Crystal Balls and scry the Rival.`,
-  hint:`Select Diamone and both Crystal Ball cards, then Scry.`,
-  done:`One ball burst their potion, the second revealed their hand — knowledge is power when choosing whom to rob. With several balls you can view several rivals in one play.`},
+  text:`<b>Fairy Queen ×2</b>. <b>Getergrin ×2</b>. One Spell → <b>4 steals</b>. Select all three and attack.`,
+  hint:`Fairy Queen + Getergrin + Spell.`,
+  done:`Four for one. Advanced characters and assistants each double a play.`},
+ {expect:"crystal", hand:[["character","Diamone"],["ability","crystal"],["ability","crystal"],["object","Blank Parchment"]], rivalShield:1,
+  rivalHand:[["object","Dusty Candelabra"],["object","Forgotten Goblet"],["devante","Caeruleum"],["object","Blank Parchment"]],
+  text:`Shielded and smug. Only <b>Diamone</b> wields Crystal Balls — one burns her shield, the other sees her hand.`,
+  hint:`Diamone + both Crystal Balls.`,
+  done:`Knowledge is loot: now you know exactly whom to rob.`},
  {expect:"defend", hand:[["character","Naldy"],["character","Smookers"],["ability","broomstick"],["ability","broomstick"],["object","Forgotten Goblet"]], rivalCount:4,
-  text:`Defence! Your Rival is about to attack you with 2 spells. A window will appear where <b>you choose your defenders</b>: pick <b>Naldy</b>, set how many broomsticks — and notice you can add <b>Smookers</b> to double every broomstick. Every card you play in defence is replenished from the Collect pile. Defending never costs you your turn.`,
+  text:`Her turn — <b>brace!</b> When the window opens, pick your defenders. Try <b>Smookers</b>: assistants double every broomstick.`,
   script:async()=>{
     S.busy=true; render();
     const rival=S.players[1];
     const ch=mk("character","Mason"), s1=mk("ability","spell"), s2=mk("ability","spell");
-    await showPlay(rival.name,"attacks You — 2 spells with Mason",[ch,s1,s2]);
+    await showPlay(rival.name,"attacks you — 2 spells with Mason",[ch,s1,s2]);
     toDiscard([ch,s1,s2]);
     await resolveSpellOnTargets(rival,{0:2},3,2);
     S.busy=false; tutActionDone();
   },
-  done:`Broomsticks are purely defensive — you can never counter with more broomstick cards than the incoming steals, an assistant doubles what each broomstick cancels, and they're powerless against Devante cards.`},
+  done:`Deflected — and every defence card replenished after. Defending never costs your turn.`},
  {expect:"potion", hand:[["character","Odorf"],["ability","potion"],["ability","potion"],["object","Blank Parchment"]], rivalCount:5,
-  intro:async()=>{
-    playSfx("potion");
-    await showPlay("Odorf","only she brews the Potions — the keeper of shields",[mk("character","Odorf"),mk("ability","potion")]);
-  },
-  text:`Standing protection. Only <b>Odorf</b> commands <b>Potions</b>. Select Odorf + both Potions and <b>Set Potion Shield</b> — they sit in front of you, and every future attack must burn through them first. Once set, you can't add more later.`,
-  hint:`Select Odorf and both Potion cards, then Set Potion Shield.`,
-  done:`Shielded! Each attack unit against you now destroys one potion instead of hurting you. When the last potion pops, Odorf goes to the discard pile along with them — and in this game, the discard pile is never reshuffled, so spent cards are gone for good.`},
- {expect:"devante", hand:[["devante","Corium"],["object","Forgotten Goblet"],["object","Dusty Candelabra"]], rivalCount:5,
-  text:`The treasures themselves. A <b>Devante card</b> needs no Character and wields immense power: as a Spell it steals <b>8 cards, split between rivals as you wish</b>; as a Crystal it reveals <b>every hand</b>; as a Broomstick it repels <b>any</b> attack; as a Potion it stands as a <b>4-hit shield</b>; as a Shield-Breaker it <b>shatters all</b> of a rival's shields at once. But playing one burns it forever — costing you a point. Only a higher-ranked Devante can block one, and <b>Corium ranks 1st</b> — unstoppable. Tap Corium and try it as a Spell.`,
-  hint:`Tap the Corium card, then "Play Devante…".`,
-  done:`Powerful — but you burned a treasure to do it. One Devante per turn, whether attacking or blocking. Hoard them, spend them only when it wins you more than it costs.`},
- {expect:null, text:`That's everything! The game ends when the <b>Collect pile empties</b>. Most Devante cards wins; ties go to the highest-ranking Devante held — Corium, rank 1, beats all. You gain Devante cards three ways: your opening hand, <b>drawing them</b> from the Collect pile, and <b>stealing</b> them.<br><br>Handy tips: <b>double-tap</b> any card to inspect it up close · the <b>note and speaker</b> buttons open the audio panel · <b>⏱</b> changes the game speed. Good luck!`, finale:true},
+  text:`Build a wall: <b>Odorf + Potions</b>, then Set Shield. Attacks burn potions before they touch you.`,
+  hint:`Odorf + both Potions → Set Potion Shield.`,
+  done:`Walled in. When the last potion pops, Odorf goes to the discard with it — gone for good.`},
+ {expect:"devante", hand:[["devante","Corium"],["object","Forgotten Goblet"],["object","Dusty Candelabra"]], rivalCount:6,
+  text:`Now the power itself. Unleash <b>Corium as a Spell — steal 8</b>. It burns after… but oh, the plunder.`,
+  hint:`Tap Corium → Play Devante → As Spell.`,
+  done:`Devastation. One Devante per turn · only a higher rank blocks one · played books <b>burn</b>. Hoard them; spend only when it wins you more.`},
+ {expect:null, text:`You know everything that matters. Pile empties → most Devantes wins → ties go to best rank.<br><br><b>Double-tap</b> inspects any card · the note and speaker set the sound · <b>⏱</b> sets the speed. To battle!`, finale:true},
 ];
 function startTutorial(){
   S={players:[
@@ -2077,12 +2065,13 @@ async function tutNext(){
   if(!st){ location.reload(); return; }
   const me=S.players[0], rival=S.players[1];
   me.hand=(st.hand||[]).map(a=>mk(a[0],a[1])); me.shield=null; me.devUsedTurn=false;
-  rival.hand=Array.from({length:st.rivalCount||0},(_,i)=>mk("object",OBJECTS[i%3].name));
+  rival.hand=st.rivalHand? st.rivalHand.map(a=>mk(a[0],a[1])) : Array.from({length:st.rivalCount||0},(_,i)=>mk("object",OBJECTS[i%3].name));
   rival.shield=st.rivalShield?{charCard:mk("character","Odorf"),charName:"Odorf",devante:false,asst:null,
     potions:Array.from({length:st.rivalShield},()=>({card:mk("ability","potion"),hits:1}))}:null;
   S.sel.clear(); S.busy=false; S.turn=0; render();
+  try{ const tt=document.querySelector("#tutPanel .tt"); if(tt) tt.textContent="Tutorial"+" · "+(TUT.i+1)+"/"+TUT_STEPS.length; }catch(e){}
   if(st.intro){ S.busy=true; render(); await st.intro(); S.busy=false; render(); }
-  if(st.expect===null) tutPanelShow(st.text, st.finale?"Finish — back to menu":"Continue", ()=>tutNext());
+  if(st.expect===null) tutPanelShow(st.text, st.finale?"To battle!":"Continue", ()=>tutNext());
   else { tutPanelShow(st.text); if(st.script) st.script(); }
 }
 function tutActionDone(){
