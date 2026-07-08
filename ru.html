@@ -242,6 +242,10 @@
     box-shadow:0 0 18px rgba(232,207,142,.4);cursor:default}
   .fan-card.aipick{outline:2px solid var(--ember)}
   .fan-card.taken{opacity:.3;filter:grayscale(.6)}
+  .tut-glow{outline:2px solid var(--brass-hi);animation:tutPulse 1.15s ease infinite}
+  @keyframes tutPulse{0%,100%{box-shadow:0 0 8px rgba(232,207,142,.55)}50%{box-shadow:0 0 24px rgba(232,207,142,.95)}}
+  #oppRow{margin-bottom:8px}
+  @media (max-height:760px){ .pile-card,#discardTop{width:clamp(46px,14vw,64px)} }
   /* speed chip */
   #speedChip{
     flex:0 0 auto;
@@ -398,7 +402,7 @@
   <div class="sub" style="letter-spacing:.2em">Против вас — два соперника</div>
   <div class="opp-pick" style="flex-direction:column;align-items:center;gap:10px">
     <button class="opp-btn" style="width:auto;height:auto;border-radius:32px;padding:16px 34px" onclick="startGame(2)">НАЧАТЬ<small>ИГРУ</small></button>
-    <button class="opp-btn" style="width:auto;height:auto;border-radius:32px;padding:12px 28px;border-color:var(--teal)" onclick="startTutorial()">ОБУЧЕНИЕ<small>КАК ИГРАТЬ</small></button>
+    <button class="opp-btn" style="width:auto;height:auto;border-radius:32px;padding:12px 28px;border-color:var(--teal)" onclick="startTutorial()">ПЕРВАЯ ДУЭЛЬ<small>УЧИМСЯ ИГРАЯ</small></button>
   </div>
   <div class="opp-pick" style="gap:8px">
     <button class="opp-btn" style="width:auto;height:auto;border-radius:22px;padding:8px 16px;font-size:13px" onclick="location.href='index.html'">🇬🇧 <small style="display:inline;font-size:11px">English</small></button>
@@ -433,7 +437,7 @@
   </div>
   <div id="logBar"><span id="musicChip" onclick="openAudioPanel()"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#c9a75f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></span><span id="sfxChip" onclick="openAudioPanel()"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#c9a75f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block"><path d="M11 5 6 9H3v6h3l5 4z" fill="#c9a75f" stroke="none"/><path d="M15.5 8.7a4.5 4.5 0 0 1 0 6.6"/><path d="M18.6 5.6a9 9 0 0 1 0 12.8"/></svg></span><span id="logText" onclick="showFullLog()">Добро пожаловать в «Деванте».</span><span id="speedChip" onclick="cycleSpeed()">⏱ МЕДЛЕННО</span></div>
   <div id="you">
-    <div id="tutPanel"><div class="tt">Обучение</div><div class="tb" id="tutText"></div><div id="tutBtnHolder"></div></div>
+    <div id="tutPanel"><div class="tt">Первая дуэль</div><div class="tb" id="tutText"></div><div id="tutBtnHolder"></div></div>
     <div id="youShield"></div>
     <div id="actionBar"></div>
     <div id="hand"></div>
@@ -766,6 +770,7 @@ function cardEl(c, mini=false){
     if(c.advanced||c.assistant){const x=document.createElement("div");x.className="tchip x2";x.textContent="×2";chips.appendChild(x);}
     d.appendChild(chips);
   }
+  if(TUT&&TUT.glowNames&&TUT.glowNames.has(c.name)) d.classList.add("tut-glow");
   const tag=document.createElement("div"); tag.className="tag";
   let sub="";
   if(c.kind==="character") sub = c.assistant?"Помощник ×2":(c.advanced?"Продвинутый · ":"")+c.traits.map(t=>TRAIT_LABEL[t]).join(" · ");
@@ -880,6 +885,12 @@ function renderActions(){
     const sub=[...a.subs][0], ch=a.chars[0];
     if(!ch.traits.includes(sub)){
       bar.innerHTML=`<div class="hint">${ch.name} не может использовать карты «${TRAIT_LABEL[sub]}» — способности должны совпадать.</div>`;
+      if(TUT&&TUT_STEPS[TUT.i]&&TUT_STEPS[TUT.i].expect==="mismatch"&&!TUT._mm){
+        TUT._mm=1;
+        (async()=>{ S.busy=true; render();
+          await showPlay("Не совпадают!", `их медальоны не совпадают — каждой способностью владеет лишь свой персонаж`, [ch, a.abils[0]].filter(Boolean));
+          S.busy=false; tutActionDone(); })();
+      }
     } else if(sub==="spell"){
       const units=a.abils.length*multiplier(ch,a.assts[0]||null);
       mk(`Заклинаний: ${a.abils.length} — украсть карт: ${units}`,"primary",()=>spellFlow(ch,a.assts[0]||null,a.abils));
@@ -910,7 +921,10 @@ function renderActions(){
 /* ---------------- core mechanics ---------------- */
 function drawCards(p,n){
   let drew=0;
-  for(let i=0;i<n;i++){
+  if(TUT&&p.human&&TUT.rig&&TUT.rig.length){   // First Duel: fate deals exactly what the story needs
+    while(drew<n&&TUT.rig.length){ p.hand.push(TUT.rig.shift()); drew++; }
+  }
+  for(let i=drew;i<n;i++){
     if(!S.collect.length) break;
     p.hand.push(S.collect.pop()); drew++;
   }
@@ -922,6 +936,12 @@ function toDiscard(cards){ S.discard.push(...cards); }
 function toBurn(cards){ S.burn.push(...cards); if(cards.some(c=>c.kind==="devante")){ fxBurnFlash(); } }
 
 function doDiscard(card){
+  if(TUT&&TUT.discardOnlyDross&&card.kind!=="object"){
+    (async()=>{ S.busy=true; render();
+      await showPlay("Стойте!", `жаль терять <b>${card.name}</b> — для сброса есть светящийся хлам`, [card]);
+      S.busy=false; render(); })();
+    return;
+  }
   if(!tutAllows("discard")) return;
   const me=S.players[0];
   playSfx("discard");
@@ -1992,60 +2012,100 @@ async function aiTurn(p){
 /* ---------------- TUTORIAL ---------------- */
 let TUT=null;
 function mk(kind,name){
+  if(kind==="dragon"){return {id:++uid,kind:"dragon",name:"Dragon",img:"special-dragon.jpg"};}
   if(kind==="character"){const t=CHARACTERS.find(c=>c.name===name);return {id:++uid,kind:"character",...t};}
   if(kind==="devante"){const t=DEVANTES.find(d=>d.name===name);return {id:++uid,kind:"devante",...t};}
   if(kind==="ability"){return {id:++uid,kind:"ability",sub:name,name:TRAIT_LABEL[name],img:ABILITY_ART[name]};}
   const t=OBJECTS.find(o=>o.name===name)||OBJECTS[0];return {id:++uid,kind:"object",...t};
 }
+const TUT_CONT_BTN="Продолжить", TUT_FINALE_BTN="В бой!";
 const TUT_STEPS=[
  {expect:null,
-  intro:async()=>{ playSfx("found");
-    await showPlay("Деванте","✨ держите таких больше всех, когда Добор иссякнет — и победа ваша",[mk("devante","Aurum")]); },
-  text:`Вот и вся игра: <b>копите книги заклинаний</b>. Готовы ограбить Ведьму?`},
- {expect:"spell", hand:[["character","Mason"],["ability","spell"],["object","Forgotten Goblet"]],
-  rivalHand:[["object","Dusty Candelabra"],["object","Blank Parchment"],["object","Forgotten Goblet"],["devante","Rosea"]],
-  text:`Ведьма прячет <b>Деванте</b>. Коснитесь <b>Mason + Заклинание</b>, атакуйте — и выбирайте добычу.`,
-  hint:`Выберите Mason и Заклинание вместе, затем атакуйте.`,
-  done:`Удар! И 2 карты вернулись к вам — каждая карта, сыгранная <b>против соперника</b>, восполняется.`},
- {expect:"discard", hand:[["object","Dusty Candelabra"],["object","Forgotten Goblet"],["object","Blank Parchment"]],
-  text:`Пустая рука? Предметы — хлам. <b>Сбросьте один</b> и пропустите ход.`,
-  hint:`Коснитесь предмета, затем «Сбросить».`,
-  done:`Безболезненно — но сбросы не восполняются. Атаки — да.`},
- {expect:"spell", hand:[["character","Fairy Queen"],["character","Getergrin"],["ability","spell"],["object","Dusty Candelabra"]], rivalCount:6,
-  text:`<b>Fairy Queen ×2</b>. <b>Getergrin ×2</b>. Одно Заклинание → <b>4 кражи</b>. Выберите всех троих и атакуйте.`,
-  hint:`Fairy Queen + Getergrin + Заклинание.`,
-  done:`Четыре за одну. Продвинутый персонаж и помощник — каждый удваивает ход.`},
- {expect:"crystal", hand:[["character","Diamone"],["ability","crystal"],["ability","crystal"],["object","Blank Parchment"]], rivalShield:1,
-  rivalHand:[["object","Dusty Candelabra"],["object","Forgotten Goblet"],["devante","Caeruleum"],["object","Blank Parchment"]],
-  text:`Под щитом и довольна собой. Хрустальным шаром владеет лишь <b>Diamone</b> — один сожжёт щит, второй откроет её карты.`,
-  hint:`Diamone + оба Хрустальных шара.`,
-  done:`Знание — та же добыча: теперь вы знаете, кого грабить.`},
- {expect:"defend", hand:[["character","Naldy"],["character","Smookers"],["ability","broomstick"],["ability","broomstick"],["object","Forgotten Goblet"]], rivalCount:4,
-  text:`Её ход — <b>держитесь!</b> Когда откроется окно, выберите защитников. Попробуйте <b>Smookers</b>: помощник удваивает каждую метлу.`,
+  hand:[["ability","crystal"],["ability","crystal"],["devante","Metallum"],["object","Dusty Candelabra"],["object","Forgotten Goblet"]],
+  rivalHand:[["devante","Aurum"],["devante","Lignum"],["devante","Rubrum"],["devante","Aurantiaco"],["object","Blank Parchment"],["object","Forgotten Goblet"]],
+  glow:["Metallum"],
+  intro:async()=>{
+    const fx=$("playFx");
+    try{
+      const title=fx.querySelector(".pfw"); const wrap=$("playFxCards");
+      if(title) title.innerHTML="✨ Восемь Деванте — герои этой истории";
+      if(wrap) wrap.innerHTML="";
+      fx.classList.add("on");
+      for(const nm of ["Corium","Aurum","Lignum","Metallum","Rubrum","Caeruleum","Aurantiaco","Rosea"]){
+        const el=cardEl(mk("devante",nm)); el.classList.add("shimmer");
+        wrap.appendChild(el); playSfx("deal"); await pause(320);
+      }
+      playSfx("found");
+      await new Promise(res=>{ fx.onclick=()=>{ fx.onclick=null; res(); }; });
+    }catch(e){}
+    fx.classList.remove("on");
+  },
+  text:`Восемь книг заклинаний. Держите больше всех, когда Добор иссякнет — и победа ваша. Одна уже светится в вашей руке… <b>берегите её</b>.`},
+ {expect:null, rig:[["character","Hereto"]],
+  run:async()=>{ await humanTapDraw(); },
+  text:`К вам приходит <b>Hereto</b>. Хотите сыграть? Попробуйте <b>Hereto + Хрустальный шар</b>…`},
+ {expect:"mismatch", glow:["Hereto"],
+  text:`Смелее — коснитесь <b>Hereto</b>, затем <b>Хрустального шара</b>.`,
+  hint:`Выберите Hereto и один Хрустальный шар вместе.`,
+  done:`Медальоны должны совпадать — а шаром владеет лишь одна ведьма. Запомните её: <b>Diamone</b>.`},
+ {expect:"discard", discardOnly:true, glow:["Dusty Candelabra","Forgotten Goblet"],
+  text:`Ходов нет. <b>Сбросьте светящийся хлам</b> и пропустите ход.`,
+  hint:`Коснитесь светящегося предмета, затем «Сбросить».`,
+  done:`Хлам потрачен, сокровище цело.`},
+ {expect:null,
+  run:async()=>{
+    const me=S.players[0], w=S.players[1];
+    await showPlay(w.name, `бьёт — Заклинание с Sallandra!`, [mk("character","Sallandra"),mk("ability","spell")]);
+    const dv=me.hand.find(c=>c.kind==="devante");
+    if(dv){ me.hand=me.hand.filter(c=>c!==dv); w.hand.push(dv); playSfx("devante-stolen"); render();
+      await showPlay(w.name, `выхватывает вашу <b>${dv.name}</b>!`, [dv]); }
+  },
+  text:`Чувствуете укол? Ваша книга — у неё. Запомните это чувство. Мы её вернём.`},
+ {expect:null, rig:[["character","Diamone"]],
+  run:async()=>{ await humanTapDraw(); },
+  glow:["Diamone"],
+  text:`<b>Diamone!</b> Шар подчиняется ей — а два Хрустальных шара ждут в вашей руке. Вы знаете, что делать.`},
+ {expect:"crystal", rig:[["ability","broomstick"],["ability","broomstick"],["object","Blank Parchment"]], glow:["Diamone"],
+  text:`<b>Загляните к Ведьме</b> — направьте на неё обе единицы.`,
+  hint:`Diamone + оба Хрустальных шара, затем обе единицы — Ведьме.`,
+  done:`<b>ПЯТЬ</b> книг — она копит! Теперь ясно, кого грабить. И смотрите: восполнение принесло <b>мётлы</b>. Судьба щедра.`},
+ {expect:"defend",
+  text:`Её ход — <b>держитесь!</b> Отражайте с <b>Hereto</b> и новыми мётлами.`,
   script:async()=>{
     S.busy=true; render();
     const rival=S.players[1];
-    const ch=mk("character","Mason"), s1=mk("ability","spell"), s2=mk("ability","spell");
-    await showPlay(rival.name,"нападает на вас — заклинания (2) с Mason",[ch,s1,s2]);
+    const ch=mk("character","Sallandra"), s1=mk("ability","spell"), s2=mk("ability","spell");
+    await showPlay(rival.name,"нападает — заклинания (2) с Sallandra",[ch,s1,s2]);
     toDiscard([ch,s1,s2]);
     await resolveSpellOnTargets(rival,{0:2},3,2);
     S.busy=false; tutActionDone();
   },
   done:`Отражено — и каждая карта защиты восполнена после. Защита не тратит ваш ход.`},
- {expect:"potion", hand:[["character","Odorf"],["ability","potion"],["ability","potion"],["object","Blank Parchment"]], rivalCount:5,
-  text:`Постройте стену: <b>Odorf + Зелья</b>, затем «Поставить щит». Атаки жгут зелья, не касаясь вас.`,
-  hint:`Odorf + оба Зелья → «Поставить щит из зелий».`,
-  done:`Под защитой. Когда лопнет последнее зелье, Odorf уйдёт в Сброс — навсегда.`},
- {expect:"devante", hand:[["devante","Corium"],["object","Forgotten Goblet"],["object","Dusty Candelabra"]], rivalCount:6,
-  text:`А теперь — сама сила. Обрушьте <b>Corium как Заклинание — 8 краж</b>. Потом он сгорит… но какова добыча!`,
-  hint:`Corium → «Сыграть Деванте» → «Как заклинание».`,
-  done:`Опустошение. Одна Деванте за ход · отразит её лишь старший ранг · сыгранные книги <b>сгорают</b>. Копите — и тратьте лишь ради большего.`},
- {expect:null, text:`Вы знаете всё, что важно. Добор пуст → больше Деванте — победа → при ничьей решает ранг.<br><br><b>Двойное касание</b> — рассмотреть карту · нота и динамик — звук · <b>⏱</b> — скорость. В бой!`, finale:true},
+ {expect:null, rig:[["dragon","Dragon"]],
+  run:async()=>{ await humanTapDraw(); },
+  text:`<b>Дракон</b>! Он возвращает себя четырёхкратно.`},
+ {expect:"dragon", glow:["Dragon"], rig:[["character","Fairy Queen"],["character","Getergrin"],["ability","spell"],["ability","spell"]],
+  text:`<b>Выпустите Дракона.</b>`,
+  hint:`Коснитесь Дракона, затем «Выпустить».`,
+  done:`Fairy Queen <b>×2</b>. Getergrin <b>×2</b>. Два Заклинания. Считайте сами…`},
+ {expect:"spell", glow:["Fairy Queen","Getergrin"],
+  text:`<b>Бейте всем сразу.</b> Восемь краж — верните своё, и с лихвой.`,
+  hint:`Fairy Queen + Getergrin + оба Заклинания → атака → все 8 — Ведьме.`,
+  done:`Ограблена! Ваш <b>Metallum</b> дома — и её запасы рядом.`},
+ {expect:null,
+  run:async()=>{
+    playSfx("victory");
+    const devs=S.players[0].hand.filter(c=>c.kind==="devante").slice(0,5);
+    const fx=$("playFx"); fx.classList.add("drama");
+    await showPlay("ПОБЕДА", `вы переиграли Ведьму — книги заклинаний ваши`, devs.length?devs:[mk("devante","Corium")]);
+    fx.classList.remove("drama");
+  },
+  text:`Вот и вся игра. В настоящем бою вас ждут ещё <b>щиты из зелий Odorf</b> — и своя Деванте, которую можно обрушить (после она сгорит). Добор пуст → больше книг — победа → ничью решает ранг.<br><br><b>Двойное касание</b> — рассмотреть карту · нота и динамик — звук · <b>⏱</b> — скорость. В бой!`, finale:true},
 ];
 function startTutorial(){
   S={players:[
       {name:"You",human:true,hand:[],shield:null,devUsedTurn:false},
-      {name:"Соперник",human:false,hand:[],shield:null,devUsedTurn:false,knowledge:{}}],
+      {name:"Ведьма",human:false,hand:[],shield:null,devUsedTurn:false,knowledge:{}}],
      collect:[],discard:[],burn:[],turn:0,log:[],busy:false,sel:new Set(),mustDraw:false};
   for(let i=0;i<40;i++)S.collect.push(mk("object",OBJECTS[i%3].name));
   TUT={i:-1};
@@ -2053,7 +2113,7 @@ function startTutorial(){
   $("game").classList.add("on");
   initBacks(); ensureAC(); preloadSounds(); startMusic();
   document.body.classList.add("playing");
-  log("Обучение — в вашем собственном темпе.");
+  log("Первая дуэль — Ведьма ждёт.");
   tutNext();
 }
 function tutPanelShow(text,btnLabel,cb){
@@ -2067,14 +2127,21 @@ async function tutNext(){
   const st=TUT_STEPS[TUT.i];
   if(!st){ location.reload(); return; }
   const me=S.players[0], rival=S.players[1];
-  me.hand=(st.hand||[]).map(a=>mk(a[0],a[1])); me.shield=null; me.devUsedTurn=false;
-  rival.hand=st.rivalHand? st.rivalHand.map(a=>mk(a[0],a[1])) : Array.from({length:st.rivalCount||0},(_,i)=>mk("object",OBJECTS[i%3].name));
-  rival.shield=st.rivalShield?{charCard:mk("character","Odorf"),charName:"Odorf",devante:false,asst:null,
-    potions:Array.from({length:st.rivalShield},()=>({card:mk("ability","potion"),hits:1}))}:null;
+  if(st.hand) me.hand=st.hand.map(a=>mk(a[0],a[1]));
+  if(st.rivalHand) rival.hand=st.rivalHand.map(a=>mk(a[0],a[1]));
+  else if(st.rivalCount!=null) rival.hand=Array.from({length:st.rivalCount},(_,i)=>mk("object",OBJECTS[i%3].name));
+  if(st.rivalShield) rival.shield={charCard:mk("character","Odorf"),charName:"Odorf",devante:false,asst:null,
+    potions:Array.from({length:st.rivalShield},()=>({card:mk("ability","potion"),hits:1}))};
+  me.devUsedTurn=false; rival.devUsedTurn=false;
+  if(st.rig) TUT.rig=st.rig.map(a=>mk(a[0],a[1]));
+  TUT.glowNames=new Set(st.glow||[]);
+  TUT.discardOnlyDross=!!st.discardOnly;
+  TUT._mm=0;
   S.sel.clear(); S.busy=false; S.turn=0; render();
-  try{ const tt=document.querySelector("#tutPanel .tt"); if(tt) tt.textContent="Обучение"+" · "+(TUT.i+1)+"/"+TUT_STEPS.length; }catch(e){}
+  try{ const tt=document.querySelector("#tutPanel .tt"); if(tt) tt.textContent="Первая дуэль · "+(TUT.i+1)+"/"+TUT_STEPS.length; }catch(e){}
   if(st.intro){ S.busy=true; render(); await st.intro(); S.busy=false; render(); }
-  if(st.expect===null) tutPanelShow(st.text, st.finale?"В бой!":"Продолжить", ()=>tutNext());
+  if(st.run){ S.busy=true; render(); await st.run(); S.busy=false; render(); }
+  if(st.expect==null) tutPanelShow(st.text, st.finale?TUT_FINALE_BTN:TUT_CONT_BTN, ()=>tutNext());
   else { tutPanelShow(st.text); if(st.script) st.script(); }
 }
 function tutActionDone(){

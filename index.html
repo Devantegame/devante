@@ -242,6 +242,10 @@
     box-shadow:0 0 18px rgba(232,207,142,.4);cursor:default}
   .fan-card.aipick{outline:2px solid var(--ember)}
   .fan-card.taken{opacity:.3;filter:grayscale(.6)}
+  .tut-glow{outline:2px solid var(--brass-hi);animation:tutPulse 1.15s ease infinite}
+  @keyframes tutPulse{0%,100%{box-shadow:0 0 8px rgba(232,207,142,.55)}50%{box-shadow:0 0 24px rgba(232,207,142,.95)}}
+  #oppRow{margin-bottom:8px}
+  @media (max-height:760px){ .pile-card,#discardTop{width:clamp(46px,14vw,64px)} }
   /* speed chip */
   #speedChip{
     flex:0 0 auto;
@@ -398,7 +402,7 @@
   <div class="sub" style="letter-spacing:.2em">You face two rivals</div>
   <div class="opp-pick" style="flex-direction:column;align-items:center;gap:10px">
     <button class="opp-btn" style="width:auto;height:auto;border-radius:32px;padding:16px 34px" onclick="startGame(2)">BEGIN<small>THE GAME</small></button>
-    <button class="opp-btn" style="width:auto;height:auto;border-radius:32px;padding:12px 28px;border-color:var(--teal)" onclick="startTutorial()">TUTORIAL<small>LEARN TO PLAY</small></button>
+    <button class="opp-btn" style="width:auto;height:auto;border-radius:32px;padding:12px 28px;border-color:var(--teal)" onclick="startTutorial()">FIRST DUEL<small>LEARN BY PLAYING</small></button>
   </div>
   <div class="opp-pick" style="gap:8px">
     <button class="opp-btn" style="width:auto;height:auto;border-radius:22px;padding:8px 16px;font-size:13px;box-shadow:0 0 14px rgba(201,167,95,.45)">🇬🇧 <small style="display:inline;font-size:11px">English</small></button>
@@ -433,7 +437,7 @@
   </div>
   <div id="logBar"><span id="musicChip" onclick="openAudioPanel()"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#c9a75f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></span><span id="sfxChip" onclick="openAudioPanel()"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#c9a75f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block"><path d="M11 5 6 9H3v6h3l5 4z" fill="#c9a75f" stroke="none"/><path d="M15.5 8.7a4.5 4.5 0 0 1 0 6.6"/><path d="M18.6 5.6a9 9 0 0 1 0 12.8"/></svg></span><span id="logText" onclick="showFullLog()">Welcome to Devante.</span><span id="speedChip" onclick="cycleSpeed()">⏱ SLOW</span></div>
   <div id="you">
-    <div id="tutPanel"><div class="tt">Tutorial</div><div class="tb" id="tutText"></div><div id="tutBtnHolder"></div></div>
+    <div id="tutPanel"><div class="tt">First Duel</div><div class="tb" id="tutText"></div><div id="tutBtnHolder"></div></div>
     <div id="youShield"></div>
     <div id="actionBar"></div>
     <div id="hand"></div>
@@ -763,6 +767,7 @@ function cardEl(c, mini=false){
     if(c.advanced||c.assistant){const x=document.createElement("div");x.className="tchip x2";x.textContent="×2";chips.appendChild(x);}
     d.appendChild(chips);
   }
+  if(TUT&&TUT.glowNames&&TUT.glowNames.has(c.name)) d.classList.add("tut-glow");
   const tag=document.createElement("div"); tag.className="tag";
   let sub="";
   if(c.kind==="character") sub = c.assistant?"Assistant ×2":(c.advanced?"Advanced · ":"")+c.traits.map(t=>TRAIT_LABEL[t]).join(" · ");
@@ -877,6 +882,12 @@ function renderActions(){
     const sub=[...a.subs][0], ch=a.chars[0];
     if(!ch.traits.includes(sub)){
       bar.innerHTML=`<div class="hint">${ch.name} can’t use ${TRAIT_LABEL[sub]} cards — the traits must match.</div>`;
+      if(TUT&&TUT_STEPS[TUT.i]&&TUT_STEPS[TUT.i].expect==="mismatch"&&!TUT._mm){
+        TUT._mm=1;
+        (async()=>{ S.busy=true; render();
+          await showPlay("No match!", `their medallions do not match — each ability answers to its own character`, [ch, a.abils[0]].filter(Boolean));
+          S.busy=false; tutActionDone(); })();
+      }
     } else if(sub==="spell"){
       const units=a.abils.length*multiplier(ch,a.assts[0]||null);
       mk(`Cast ${a.abils.length} Spell${a.abils.length>1?"s":""} — ${units} steal${units>1?"s":""}`,"primary",()=>spellFlow(ch,a.assts[0]||null,a.abils));
@@ -907,7 +918,10 @@ function renderActions(){
 /* ---------------- core mechanics ---------------- */
 function drawCards(p,n){
   let drew=0;
-  for(let i=0;i<n;i++){
+  if(TUT&&p.human&&TUT.rig&&TUT.rig.length){   // First Duel: fate deals exactly what the story needs
+    while(drew<n&&TUT.rig.length){ p.hand.push(TUT.rig.shift()); drew++; }
+  }
+  for(let i=drew;i<n;i++){
     if(!S.collect.length) break;
     p.hand.push(S.collect.pop()); drew++;
   }
@@ -919,6 +933,12 @@ function toDiscard(cards){ S.discard.push(...cards); }
 function toBurn(cards){ S.burn.push(...cards); if(cards.some(c=>c.kind==="devante")){ fxBurnFlash(); } }
 
 function doDiscard(card){
+  if(TUT&&TUT.discardOnlyDross&&card.kind!=="object"){
+    (async()=>{ S.busy=true; render();
+      await showPlay("Hold on!", `you would regret losing <b>${card.name}</b> — the glowing dross is for discarding`, [card]);
+      S.busy=false; render(); })();
+    return;
+  }
   if(!tutAllows("discard")) return;
   const me=S.players[0];
   playSfx("discard");
@@ -1989,60 +2009,100 @@ async function aiTurn(p){
 /* ---------------- TUTORIAL ---------------- */
 let TUT=null;
 function mk(kind,name){
+  if(kind==="dragon"){return {id:++uid,kind:"dragon",name:"Dragon",img:"special-dragon.jpg"};}
   if(kind==="character"){const t=CHARACTERS.find(c=>c.name===name);return {id:++uid,kind:"character",...t};}
   if(kind==="devante"){const t=DEVANTES.find(d=>d.name===name);return {id:++uid,kind:"devante",...t};}
   if(kind==="ability"){return {id:++uid,kind:"ability",sub:name,name:TRAIT_LABEL[name],img:ABILITY_ART[name]};}
   const t=OBJECTS.find(o=>o.name===name)||OBJECTS[0];return {id:++uid,kind:"object",...t};
 }
+const TUT_CONT_BTN="Continue", TUT_FINALE_BTN="To battle!";
 const TUT_STEPS=[
  {expect:null,
-  intro:async()=>{ playSfx("found");
-    await showPlay("The Devante","✨ hold the most of these when the Collect pile runs dry — and win",[mk("devante","Aurum")]); },
-  text:`That's the whole game: <b>hoard the spellbooks</b>. Ready to rob a Witch?`},
- {expect:"spell", hand:[["character","Mason"],["ability","spell"],["object","Forgotten Goblet"]],
-  rivalHand:[["object","Dusty Candelabra"],["object","Blank Parchment"],["object","Forgotten Goblet"],["devante","Rosea"]],
-  text:`The Witch is hiding a <b>Devante</b>. Tap <b>Mason + Spell</b>, then attack — and pick your plunder.`,
-  hint:`Select Mason and the Spell together, then hit attack.`,
-  done:`Struck! And 2 cards flew back to you — every card played <b>against a rival</b> is replenished.`},
- {expect:"discard", hand:[["object","Dusty Candelabra"],["object","Forgotten Goblet"],["object","Blank Parchment"]],
-  text:`Dead hand? Objects are dross. <b>Discard one</b> to pass.`,
-  hint:`Tap an Object, then Discard.`,
-  done:`Painless — but discards are never replenished. Attacks are.`},
- {expect:"spell", hand:[["character","Fairy Queen"],["character","Getergrin"],["ability","spell"],["object","Dusty Candelabra"]], rivalCount:6,
-  text:`<b>Fairy Queen ×2</b>. <b>Getergrin ×2</b>. One Spell → <b>4 steals</b>. Select all three and attack.`,
-  hint:`Fairy Queen + Getergrin + Spell.`,
-  done:`Four for one. Advanced characters and assistants each double a play.`},
- {expect:"crystal", hand:[["character","Diamone"],["ability","crystal"],["ability","crystal"],["object","Blank Parchment"]], rivalShield:1,
-  rivalHand:[["object","Dusty Candelabra"],["object","Forgotten Goblet"],["devante","Caeruleum"],["object","Blank Parchment"]],
-  text:`Shielded and smug. Only <b>Diamone</b> wields Crystal Balls — one burns her shield, the other sees her hand.`,
-  hint:`Diamone + both Crystal Balls.`,
-  done:`Knowledge is loot: now you know exactly whom to rob.`},
- {expect:"defend", hand:[["character","Naldy"],["character","Smookers"],["ability","broomstick"],["ability","broomstick"],["object","Forgotten Goblet"]], rivalCount:4,
-  text:`Her turn — <b>brace!</b> When the window opens, pick your defenders. Try <b>Smookers</b>: assistants double every broomstick.`,
+  hand:[["ability","crystal"],["ability","crystal"],["devante","Metallum"],["object","Dusty Candelabra"],["object","Forgotten Goblet"]],
+  rivalHand:[["devante","Aurum"],["devante","Lignum"],["devante","Rubrum"],["devante","Aurantiaco"],["object","Blank Parchment"],["object","Forgotten Goblet"]],
+  glow:["Metallum"],
+  intro:async()=>{
+    const fx=$("playFx");
+    try{
+      const title=fx.querySelector(".pfw"); const wrap=$("playFxCards");
+      if(title) title.innerHTML="✨ The Eight Devante — the heroes of this tale";
+      if(wrap) wrap.innerHTML="";
+      fx.classList.add("on");
+      for(const nm of ["Corium","Aurum","Lignum","Metallum","Rubrum","Caeruleum","Aurantiaco","Rosea"]){
+        const el=cardEl(mk("devante",nm)); el.classList.add("shimmer");
+        wrap.appendChild(el); playSfx("deal"); await pause(320);
+      }
+      playSfx("found");
+      await new Promise(res=>{ fx.onclick=()=>{ fx.onclick=null; res(); }; });
+    }catch(e){}
+    fx.classList.remove("on");
+  },
+  text:`Eight spellbooks. Hold the most when the Collect pile dies — win. One already glows in your hand… <b>guard it</b>.`},
+ {expect:null, rig:[["character","Hereto"]],
+  run:async()=>{ await humanTapDraw(); },
+  text:`<b>Hereto</b> joins you. Fancy a play? Try <b>Hereto + a Crystal Ball</b>…`},
+ {expect:"mismatch", glow:["Hereto"],
+  text:`Go on — tap <b>Hereto</b>, then a <b>Crystal Ball</b>.`,
+  hint:`Select Hereto and one Crystal Ball together.`,
+  done:`Medallions must match — and the crystal answers to one witch alone. Remember her: <b>Diamone</b>.`},
+ {expect:"discard", discardOnly:true, glow:["Dusty Candelabra","Forgotten Goblet"],
+  text:`No play fits. <b>Discard the glowing dross</b> to pass.`,
+  hint:`Tap a glowing Object, then Discard.`,
+  done:`Dross spent, treasure kept.`},
+ {expect:null,
+  run:async()=>{
+    const me=S.players[0], w=S.players[1];
+    await showPlay(w.name, `strikes — a Spell with Sallandra!`, [mk("character","Sallandra"),mk("ability","spell")]);
+    const dv=me.hand.find(c=>c.kind==="devante");
+    if(dv){ me.hand=me.hand.filter(c=>c!==dv); w.hand.push(dv); playSfx("devante-stolen"); render();
+      await showPlay(w.name, `snatches your <b>${dv.name}</b>!`, [dv]); }
+  },
+  text:`Feel that sting? Your spellbook — gone. Hold onto it. We are getting it back.`},
+ {expect:null, rig:[["character","Diamone"]],
+  run:async()=>{ await humanTapDraw(); },
+  glow:["Diamone"],
+  text:`<b>Diamone!</b> The crystal answers to her — and two Crystal Balls wait in your hand. You know the move.`},
+ {expect:"crystal", rig:[["ability","broomstick"],["ability","broomstick"],["object","Blank Parchment"]], glow:["Diamone"],
+  text:`<b>Scry the Witch</b> — send both units at her.`,
+  hint:`Diamone + both Crystal Balls, then assign both units to the Witch.`,
+  done:`<b>FIVE</b> spellbooks — she is hoarding! Now we know whom to rob. And look: your replenish brought <b>broomsticks</b>. Fate provides.`},
+ {expect:"defend",
+  text:`Her turn — <b>brace!</b> Deflect with <b>Hereto</b> and your new broomsticks.`,
   script:async()=>{
     S.busy=true; render();
     const rival=S.players[1];
-    const ch=mk("character","Mason"), s1=mk("ability","spell"), s2=mk("ability","spell");
-    await showPlay(rival.name,"attacks you — 2 spells with Mason",[ch,s1,s2]);
+    const ch=mk("character","Sallandra"), s1=mk("ability","spell"), s2=mk("ability","spell");
+    await showPlay(rival.name,"attacks — 2 spells with Sallandra",[ch,s1,s2]);
     toDiscard([ch,s1,s2]);
     await resolveSpellOnTargets(rival,{0:2},3,2);
     S.busy=false; tutActionDone();
   },
-  done:`Deflected — and every defence card replenished after. Defending never costs your turn.`},
- {expect:"potion", hand:[["character","Odorf"],["ability","potion"],["ability","potion"],["object","Blank Parchment"]], rivalCount:5,
-  text:`Build a wall: <b>Odorf + Potions</b>, then Set Shield. Attacks burn potions before they touch you.`,
-  hint:`Odorf + both Potions → Set Potion Shield.`,
-  done:`Walled in. When the last potion pops, Odorf goes to the discard with it — gone for good.`},
- {expect:"devante", hand:[["devante","Corium"],["object","Forgotten Goblet"],["object","Dusty Candelabra"]], rivalCount:6,
-  text:`Now the power itself. Unleash <b>Corium as a Spell — steal 8</b>. It burns after… but oh, the plunder.`,
-  hint:`Tap Corium → Play Devante → As Spell.`,
-  done:`Devastation. One Devante per turn · only a higher rank blocks one · played books <b>burn</b>. Hoard them; spend only when it wins you more.`},
- {expect:null, text:`You know everything that matters. Pile empties → most Devantes wins → ties go to best rank.<br><br><b>Double-tap</b> inspects any card · the note and speaker set the sound · <b>⏱</b> sets the speed. To battle!`, finale:true},
+  done:`Deflected — and every defence card replenished after. Defence never costs your turn.`},
+ {expect:null, rig:[["dragon","Dragon"]],
+  run:async()=>{ await humanTapDraw(); },
+  text:`A <b>Dragon</b>! It repays itself fourfold.`},
+ {expect:"dragon", glow:["Dragon"], rig:[["character","Fairy Queen"],["character","Getergrin"],["ability","spell"],["ability","spell"]],
+  text:`<b>Unleash the Dragon.</b>`,
+  hint:`Tap the Dragon, then Unleash.`,
+  done:`Fairy Queen <b>×2</b>. Getergrin <b>×2</b>. Two Spells. Do the maths…`},
+ {expect:"spell", glow:["Fairy Queen","Getergrin"],
+  text:`<b>Strike with everything.</b> Eight steals — take back what is yours, and more.`,
+  hint:`Fairy Queen + Getergrin + both Spells → attack → send all 8 at the Witch.`,
+  done:`Plundered! Your <b>Metallum</b> is home — with her hoard beside it.`},
+ {expect:null,
+  run:async()=>{
+    playSfx("victory");
+    const devs=S.players[0].hand.filter(c=>c.kind==="devante").slice(0,5);
+    const fx=$("playFx"); fx.classList.add("drama");
+    await showPlay("VICTORY", `you out-hoarded the Witch — the spellbooks are yours`, devs.length?devs:[mk("devante","Corium")]);
+    fx.classList.remove("drama");
+  },
+  text:`That is the game. In real battle you will also meet <b>Odorf's potion shields</b> — and may unleash a Devante of your own (it burns after). Pile empties → most books wins → ties go to best rank.<br><br><b>Double-tap</b> inspects a card · note & speaker set the sound · <b>⏱</b> sets speed. To battle!`, finale:true},
 ];
 function startTutorial(){
   S={players:[
       {name:"You",human:true,hand:[],shield:null,devUsedTurn:false},
-      {name:"Rival",human:false,hand:[],shield:null,devUsedTurn:false,knowledge:{}}],
+      {name:"The Witch",human:false,hand:[],shield:null,devUsedTurn:false,knowledge:{}}],
      collect:[],discard:[],burn:[],turn:0,log:[],busy:false,sel:new Set(),mustDraw:false};
   for(let i=0;i<40;i++)S.collect.push(mk("object",OBJECTS[i%3].name));
   TUT={i:-1};
@@ -2050,7 +2110,7 @@ function startTutorial(){
   $("game").classList.add("on");
   initBacks(); ensureAC(); preloadSounds(); startMusic();
   document.body.classList.add("playing");
-  log("Tutorial — learn at your own pace.");
+  log("Your first duel — the Witch awaits.");
   tutNext();
 }
 function tutPanelShow(text,btnLabel,cb){
@@ -2064,14 +2124,21 @@ async function tutNext(){
   const st=TUT_STEPS[TUT.i];
   if(!st){ location.reload(); return; }
   const me=S.players[0], rival=S.players[1];
-  me.hand=(st.hand||[]).map(a=>mk(a[0],a[1])); me.shield=null; me.devUsedTurn=false;
-  rival.hand=st.rivalHand? st.rivalHand.map(a=>mk(a[0],a[1])) : Array.from({length:st.rivalCount||0},(_,i)=>mk("object",OBJECTS[i%3].name));
-  rival.shield=st.rivalShield?{charCard:mk("character","Odorf"),charName:"Odorf",devante:false,asst:null,
-    potions:Array.from({length:st.rivalShield},()=>({card:mk("ability","potion"),hits:1}))}:null;
+  if(st.hand) me.hand=st.hand.map(a=>mk(a[0],a[1]));
+  if(st.rivalHand) rival.hand=st.rivalHand.map(a=>mk(a[0],a[1]));
+  else if(st.rivalCount!=null) rival.hand=Array.from({length:st.rivalCount},(_,i)=>mk("object",OBJECTS[i%3].name));
+  if(st.rivalShield) rival.shield={charCard:mk("character","Odorf"),charName:"Odorf",devante:false,asst:null,
+    potions:Array.from({length:st.rivalShield},()=>({card:mk("ability","potion"),hits:1}))};
+  me.devUsedTurn=false; rival.devUsedTurn=false;
+  if(st.rig) TUT.rig=st.rig.map(a=>mk(a[0],a[1]));
+  TUT.glowNames=new Set(st.glow||[]);
+  TUT.discardOnlyDross=!!st.discardOnly;
+  TUT._mm=0;
   S.sel.clear(); S.busy=false; S.turn=0; render();
-  try{ const tt=document.querySelector("#tutPanel .tt"); if(tt) tt.textContent="Tutorial"+" · "+(TUT.i+1)+"/"+TUT_STEPS.length; }catch(e){}
+  try{ const tt=document.querySelector("#tutPanel .tt"); if(tt) tt.textContent="First Duel · "+(TUT.i+1)+"/"+TUT_STEPS.length; }catch(e){}
   if(st.intro){ S.busy=true; render(); await st.intro(); S.busy=false; render(); }
-  if(st.expect===null) tutPanelShow(st.text, st.finale?"To battle!":"Continue", ()=>tutNext());
+  if(st.run){ S.busy=true; render(); await st.run(); S.busy=false; render(); }
+  if(st.expect==null) tutPanelShow(st.text, st.finale?TUT_FINALE_BTN:TUT_CONT_BTN, ()=>tutNext());
   else { tutPanelShow(st.text); if(st.script) st.script(); }
 }
 function tutActionDone(){
