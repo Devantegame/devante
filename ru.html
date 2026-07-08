@@ -1001,6 +1001,7 @@ function spellFlow(ch,asst,spells){
     onConfirm:(alloc)=>{
       const total=Object.values(alloc).reduce((a,b)=>a+b,0);
       if(total===0){toast("Распределите хотя бы одну единицу.");return false;}
+      if(TUT){const st=TUT_STEPS[TUT.i]; if(st&&st.requireAbil&&total<units){toast("Отправьте все единицы Ведьме — ва-банк!");return false;}}
       const played=[ch,...(asst?[asst]:[]),...spells];
       fxHandToDiscard(played);
       removeFromHand(S.players[0],played); toDiscard(played); S.sel.clear();
@@ -1037,8 +1038,8 @@ async function resolveSpellOnTargets(att,alloc,cardsPlayed,abilityCount){
   const drew=drawCards(att,cardsPlayed);
   const drawn=att.hand.slice(handBefore);
   if(drew){
-    fxDrawFly(att,drew);
     fxRefund(att,drew);
+    await fxReplenishParade(att, att.hand.slice(-drew));
     log(`<b>${att.name}</b> добирает ${drew} ${ruP(drew,"карту","карты","карт")} — по одной за каждую сыгранную.`);
     if(att.human) toast(`Восполнено +${drew} — по одной за каждую сыгранную карту`);
     await pause(Math.round(T("beat")*0.8));
@@ -1066,6 +1067,7 @@ function crystalFlow(ch,asst,balls){
     onConfirm:(alloc)=>{
       const total=Object.values(alloc).reduce((a,b)=>a+b,0);
       if(total===0){toast("Распределите хотя бы одну единицу.");return false;}
+      if(TUT){const st=TUT_STEPS[TUT.i]; if(st&&st.requireAbil&&total<units){toast("Отправьте все единицы Ведьме — ва-банк!");return false;}}
       const played=[ch,...(asst?[asst]:[]),...balls];
       fxHandToDiscard(played);
       removeFromHand(S.players[0],played); toDiscard(played); S.sel.clear();
@@ -1103,8 +1105,8 @@ async function resolveCrystalOnTargets(att,alloc,cardsPlayed,abilityCount){
   const drew=drawCards(att,cardsPlayed);
   const drawn=att.hand.slice(handBefore);
   if(drew){
-    fxDrawFly(att,drew);
     fxRefund(att,drew);
+    await fxReplenishParade(att, att.hand.slice(-drew));
     log(`<b>${att.name}</b> добирает ${drew} ${ruP(drew,"карту","карты","карт")} — по одной за каждую сыгранную.`);
     if(att.human) toast(`Восполнено +${drew} — по одной за каждую сыгранную карту`);
     await pause(Math.round(T("beat")*0.8));
@@ -1225,6 +1227,7 @@ function humanDefend(def,att,units,attackType,abilityCount){
       go.onclick=async ()=>{
         const {asst,v,cancel}=calc();
         if(!v) return;
+        if(TUT&&cancel<units){ toast("Отразите всё — добавьте ещё метлу!"); return; }
         const spent=[chars[selChar],...(asst?[asst]:[]),...brooms.filter(c=>selBrooms.has(c.id))];
         removeFromHand(def,spent); toDiscard(spent);
         def._pendingRefund=(def._pendingRefund||0)+spent.length;
@@ -1610,6 +1613,35 @@ function dealAnimation(){
   });
 }
 /* a glowing REFUND +N tag rises from the Collect pile toward whoever earned it */
+function fxReplenishParade(p,cards){
+  return new Promise(res=>{ try{
+    if(!p.human||!cards.length){ fxDrawFly(p,cards.length); res(); return; }
+    const W=window.innerWidth,H=window.innerHeight;
+    const pileR=document.querySelector("#collectPile .pile-card").getBoundingClientRect();
+    const handR=document.getElementById("hand").getBoundingClientRect();
+    const n=cards.length, cw=Math.min(56,Math.floor((W-40)/n)-10), gap=8;
+    const total=n*cw+(n-1)*gap, x0=Math.max(8,W/2-total/2), y=H*0.4;
+    const els=[];
+    cards.forEach((c,i)=>{
+      setTimeout(()=>{
+        playSfx("pick");
+        const el=cardEl(c); el.classList.add("fx-card");
+        el.style.cssText+=`left:${pileR.left}px;top:${pileR.top}px;width:${pileR.width}px;height:${pileR.height}px;z-index:215`;
+        document.body.appendChild(el); els.push(el);
+        requestAnimationFrame(()=>{ el.style.left=(x0+i*(cw+gap))+"px"; el.style.top=y+"px";
+          el.style.width=cw+"px"; el.style.height=Math.round(cw*1.66)+"px"; });
+      }, i*230);
+    });
+    setTimeout(()=>{
+      els.forEach((el,i)=>setTimeout(()=>{
+        el.style.left=(handR.left+handR.width/2-24)+"px"; el.style.top=(handR.top+6)+"px";
+        el.style.width="48px"; el.style.height="80px"; el.style.opacity="0.2";
+        setTimeout(()=>el.remove(),430);
+      }, i*110));
+      setTimeout(res, n*110+540);
+    }, n*230+520);
+  }catch(e){ res(); } });
+}
 function fxClash(brooms,cancel,attackType){
   return new Promise(res=>{ try{
     const W=window.innerWidth,H=window.innerHeight;
@@ -1646,7 +1678,8 @@ async function settleReplenish(def){
   if(!def._pendingRefund) return;
   const nR=def._pendingRefund; def._pendingRefund=0;
   const dr=drawCards(def,nR);
-  fxDrawFly(def,dr); fxRefund(def,dr);
+  fxRefund(def,dr);
+  await fxReplenishParade(def, def.hand.slice(-dr));
   log(`<b>${def.name}</b> восполняет из Добора: ${dr} — по одной за каждую карту защиты.`);
   if(def.human){ toast(`Восполнено +${dr} — по одной за каждую карту защиты`); render(); await celebrateFinds(def,dr); }
   render(); await pause(Math.round(T("beat")*0.7));
@@ -2100,7 +2133,7 @@ const TUT_STEPS=[
   text:`Коснитесь светящегося <b>Hereto</b>, затем светящегося <b>Хрустального шара</b>.`,
   hint:`Выберите Hereto и один Хрустальный шар вместе.`,
   done:`Медальоны должны совпадать — шаром владеет лишь одна ведьма. Запомните её: <b>Diamone</b>.`},
- {expect:"discard", discardOnly:true, glow:["Dusty Candelabra","Forgotten Goblet"],
+ {expect:"discard", discardOnly:true, glow:["Dusty Candelabra"],
   text:`Ходов нет. <b>Сбросьте светящийся хлам</b> и пропустите ход.`,
   hint:`Коснитесь светящегося предмета, затем «Сбросить».`,
   done:`Хлам потрачен, сокровище цело.`},
