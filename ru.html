@@ -147,6 +147,8 @@
   .card.sel{transform:translateY(-20px);border-color:var(--teal);outline:2.5px solid var(--teal);
     box-shadow:0 8px 20px rgba(0,0,0,.65),0 0 18px rgba(126,192,188,.75)}
   .card.sel.tut-glow{animation:none;outline-color:var(--teal)}
+  #modal.mist #modalBox{animation:mistIn 1.6s ease}
+  @keyframes mistIn{0%{filter:blur(16px);opacity:0}55%{filter:blur(6px);opacity:.7}100%{filter:blur(0);opacity:1}}
   .tut-circle{outline:3px solid #e0654a;border-radius:14px;box-shadow:0 0 22px rgba(224,101,74,.9);animation:mmPulse 1s ease infinite}
   .mm-zoom .tchip{outline:3px solid #e0654a;border-radius:50%;
     box-shadow:0 0 16px rgba(224,101,74,.95);animation:mmPulse .9s ease infinite}
@@ -990,6 +992,7 @@ function absorbWithShield(def,units,attackType){
     while(units>0 && sh.potions.length){
       const pot=sh.potions[0];
       pot.hits--; units--; absorbed++;
+      if(TUT && attackType==="crystal") fxShieldCrunch(def, pot.card);
       if(pot.hits<=0){ toDiscard([pot.card]); sh.potions.shift(); }
       else log(`${def.name} переворачивает усиленное зелье — оно выдержит ещё один удар.`);
     }
@@ -1154,6 +1157,7 @@ function showBeingScried(att,def){
   });
 }
 function showRevealedHands(defs){
+  if(TUT){ try{ $("modal").classList.add("mist"); setTimeout(()=>$("modal").classList.remove("mist"),2400); }catch(e){} }
   return new Promise(res=>{
     const box=$("modalBox");
     box.innerHTML=`<h2>Хрустальный шар проясняется…</h2>`;
@@ -1228,6 +1232,7 @@ function humanDefend(def,att,units,attackType,abilityCount){
       const summary=document.createElement("p"); summary.style.cssText="text-align:center;font-size:14.5px;margin-top:8px";
       box.appendChild(summary);
       const go=document.createElement("button"); go.className="abtn primary"; go.style.width="100%";
+      if(TUT) go.classList.add("tut-circle");
       box.appendChild(go);
       const calc=()=>{
         const asst=selAsst>=0?assts[selAsst]:null;
@@ -1265,10 +1270,13 @@ function humanDefend(def,att,units,attackType,abilityCount){
       const pc=cardEl(lowDev); pc.classList.add("shimmer"); pc.style.cursor="default"; prev.appendChild(pc);
       box.appendChild(prev);
       const b=document.createElement("button");b.className="abtn";b.style.width="100%";b.style.marginTop="4px";
+      if(TUT) b.classList.add("tut-circle");
       b.textContent=`Отразить всё младшей картой Деванте (${lowDev.name})`;
-      b.onclick=()=>{
+      b.onclick=async ()=>{
         const d=lowDev;
         removeFromHand(def,[d]); toBurn([d]); def.devUsedTurn=true;
+        $("modal").classList.remove("on"); render();
+        await fxDevRepel(d, units, attackType);
         const drew=drawCards(def,2);
         fxDrawFly(def,drew);
         log(`📕 Вы жертвуете <b>${d.name}</b> как метлу — атака отражена, взято карт: ${drew}.`);
@@ -1279,7 +1287,7 @@ function humanDefend(def,att,units,attackType,abilityCount){
     }
     const skip=document.createElement("button");skip.className="abtn danger";skip.style.width="100%";skip.style.marginTop="8px";
     skip.textContent="Принять удар";
-    skip.onclick=()=>{ if(TUT){ toast(`Не в этот раз — защищайтесь!`); return; } $("modal").classList.remove("on");res(units); };
+    skip.onclick=()=>{ if(TUT){ toast(`Не спеши, юный подмастерье — по одному волшебному уроку за раз.`); return; } $("modal").classList.remove("on");res(units); };
     box.appendChild(skip);
     $("modal").classList.add("on");
   });
@@ -1663,6 +1671,66 @@ function fxReplenishParade(p,cards){
       setTimeout(res, n*(TUT?240:110)+540);
     }, n*(TUT?520:230)+(TUT?900:520));
   }catch(e){ res(); } });
+}
+function fxDevRepel(devCard,count,attackType){
+  return new Promise(res=>{ try{
+    const W=window.innerWidth,H=window.innerHeight;
+    const n=Math.max(1,Math.min(count,4));
+    const phantoms=[];
+    for(let i=0;i<n;i++){
+      const ph=cardEl(mk("ability",attackType==="spell"?"spell":"crystal")); ph.classList.add("fx-card");
+      ph.style.cssText+=`left:${W/2-32+(i-(n-1)/2)*42}px;top:-150px;width:64px;height:106px;z-index:236`;
+      document.body.appendChild(ph); phantoms.push(ph);
+      requestAnimationFrame(()=>{ ph.style.top=(H*0.3)+"px"; });
+    }
+    setTimeout(()=>{
+      let hr; try{ hr=document.getElementById("hand").getBoundingClientRect(); }catch(e){ hr={top:H-160}; }
+      const dv=cardEl(devCard); dv.classList.add("fx-card","shimmer");
+      dv.style.cssText+=`left:${W/2-45}px;top:${hr.top}px;width:90px;height:150px;z-index:238`;
+      document.body.appendChild(dv);
+      requestAnimationFrame(()=>{ dv.style.top=(H*0.32)+"px"; });
+      setTimeout(()=>{
+        playSfx("devante");
+        dv.style.transform="scale(1.25)";
+        phantoms.forEach((ph,i)=>{
+          ph.style.transform=`rotate(${i%2?110:-110}deg)`;
+          ph.style.left=(i%2? W+140:-160)+"px"; ph.style.top=(H*0.1)+"px"; ph.style.opacity="0";
+        });
+        setTimeout(()=>{
+          // the treasure pays the price: off to the burn pile
+          try{ const br=$("burnPile").getBoundingClientRect();
+            dv.style.transform="scale(1) rotate(-8deg)";
+            dv.style.left=(br.left+br.width/2-24)+"px"; dv.style.top=(br.top+6)+"px";
+            dv.style.width="48px"; dv.style.height="80px"; dv.style.opacity="0.3";
+          }catch(e){}
+          playSfx("discard");
+          setTimeout(()=>{ dv.remove(); phantoms.forEach(p=>p.remove()); res(); },720);
+        },820);
+      },560);
+    },480);
+  }catch(e){ res(); } });
+}
+function fxShieldCrunch(def,potCard){
+  try{
+    const W=window.innerWidth,H=window.innerHeight;
+    const dr=boxOf(def).getBoundingClientRect();
+    const pot=cardEl(potCard); pot.classList.add("fx-card");
+    pot.style.cssText+=`left:${dr.left+dr.width/2-32}px;top:${dr.top}px;width:64px;height:106px;z-index:232`;
+    document.body.appendChild(pot);
+    requestAnimationFrame(()=>{ pot.style.top=(H*0.34)+"px"; pot.style.left=(W/2-32)+"px"; });
+    setTimeout(()=>{
+      const orb=cardEl(mk("ability","crystal")); orb.classList.add("fx-card");
+      orb.style.cssText+=`left:${W/2-32}px;top:${H+60}px;width:64px;height:106px;z-index:233`;
+      document.body.appendChild(orb);
+      requestAnimationFrame(()=>{ orb.style.top=(H*0.4)+"px"; });
+      setTimeout(()=>{
+        playSfx("crystal");
+        pot.style.transform="rotate(120deg)"; pot.style.left=(W+120)+"px"; pot.style.top=(H*0.12)+"px"; pot.style.opacity="0";
+        orb.style.opacity="0";
+        setTimeout(()=>{pot.remove();orb.remove();},700);
+      },430);
+    },520);
+  }catch(e){}
 }
 function fxClash(brooms,cancel,attackType){
   return new Promise(res=>{ try{
@@ -2139,7 +2207,7 @@ function mk(kind,name){
 const TUT_CONT_BTN="Продолжить", TUT_FINALE_BTN="В бой!";
 const TUT_STEPS=[
  {expect:null,
-  hand:[["ability","crystal"],["ability","potion"],["devante","Metallum"],["character","Odorf"],["object","Dusty Candelabra"],["object","Forgotten Goblet"]],
+  hand:[["ability","crystal"],["devante","Metallum"],["character","Odorf"],["object","Dusty Candelabra"],["object","Forgotten Goblet"]],
   rivalHand:[["devante","Aurum"],["devante","Lignum"],["devante","Rubrum"],["devante","Aurantiaco"],["object","Blank Parchment"],["object","Forgotten Goblet"],["object","Dusty Candelabra"],["object","Blank Parchment"],["object","Forgotten Goblet"]],
   glow:["Metallum"],
   intro:async()=>{
@@ -2186,7 +2254,7 @@ const TUT_STEPS=[
   text:`Книга И Odorf — вы видели, как они покинули вашу руку. Запомните этот укол. Мы всё вернём.`},
  {expect:"discard", discardOnly:true, glow:["Forgotten Goblet"], rig:[["ability","crystal"]],
   run:async()=>{ await humanTapDraw(); },
-  text:`Ваш ход: вы взяли <b>второй Хрустальный шар</b>! Но его хозяйки нет, а зелье без Odorf бесполезно. <b>Сбросьте последний хлам.</b>`,
+  text:`Ваш ход: вы взяли <b>второй Хрустальный шар</b>! Но его хозяйки нет. <b>Сбросьте последний хлам.</b>`,
   hint:`Коснитесь светящегося предмета, затем «Сбросить».`,
   done:`Терпение. Части сходятся.`},
  {expect:null,
@@ -2231,7 +2299,7 @@ const TUT_STEPS=[
  {expect:"crystal", requireAbil:2, rig:[["character","Diamone"]], glow:["Diamone","Хрустальный шар"],
   run:async()=>{
     await humanTapDraw();
-    TUT.rig=[mk("ability","broomstick"),mk("ability","broomstick"),mk("object","Blank Parchment")];   // the scry replenish, staged after the draw
+    TUT.rig=[mk("ability","broomstick"),mk("ability","broomstick"),mk("ability","potion")];   // the scry replenish, staged after the draw
     try{
       const fx=$("playFx"); const title=fx.querySelector(".pfw"); const wrap=$("playFxCards");
       if(title) title.innerHTML="🎉 Поздравляем — вы нашли <b>Diamone</b>!";
@@ -2250,7 +2318,27 @@ const TUT_STEPS=[
   },
   text:`Сыграйте <b>Diamone с ОБОИМИ Хрустальными шарами</b> — один взор на её щит, второй на её тайны.`,
   hint:`Diamone + оба Хрустальных шара → обе единицы — Ведьме.`,
-  done:`<b>ХРУСТЬ</b> — первый взор сжёг её зелье (щиты кормятся первыми; Odorf падает вместе с ним). Второй увидел всё: <b>ПЯТЬ книг!</b> Теперь ясно, кого грабить. А восполнение принесло <b>мётлы</b> — судьба щедра.`},
+  done:`Щиты кормятся первыми — а затем видение: <b>ПЯТЬ книг!</b> Теперь ясно, кого грабить.`},
+ {expect:null,
+  run:async()=>{
+    try{
+      const fx=$("playFx"); const title=fx.querySelector(".pfw"); const wrap=$("playFxCards");
+      if(title) title.innerHTML="Священные пары";
+      if(wrap){ wrap.innerHTML="";
+        const ar=()=>{ const a=document.createElement("div");
+          a.style.cssText="align-self:center;font-size:30px;color:var(--brass-hi);text-shadow:0 0 12px rgba(232,207,142,.8)";
+          a.textContent="\u279C"; return a; };
+        wrap.appendChild(cardEl(mk("character","Diamone"))); wrap.appendChild(ar()); wrap.appendChild(cardEl(mk("ability","crystal")));
+        const gap=document.createElement("div"); gap.style.cssText="width:26px"; wrap.appendChild(gap);
+        wrap.appendChild(cardEl(mk("character","Odorf"))); wrap.appendChild(ar()); wrap.appendChild(cardEl(mk("ability","potion")));
+        [...wrap.children].forEach(el=>el.classList&&el.classList.add("shimmer"));
+      }
+      fx.classList.add("on");
+      await new Promise(res=>{ fx.onclick=()=>{ fx.onclick=null; res(); }; });
+      fx.classList.remove("on");
+    }catch(e){}
+  },
+  text:`Пришло <b>Зелье</b> — но зельями владеет лишь <b>Odorf</b>, а его она потратила на свой щит. Пары нерушимы: <b>Diamone \u279C Шар · Odorf \u279C Зелье</b>.`},
  {expect:"defend",
   text:`Её ход — <b>держитесь!</b> Отражайте с <b>Hereto</b> и мётлами.`,
   script:async()=>{
@@ -2285,7 +2373,7 @@ const TUT_STEPS=[
   text:`Она тянет время. Пора кончать.`},
  {expect:"spell", requireAbil:2, glow:["Fairy Queen","Getergrin","Заклинание"],
   rig:[["object","Blank Parchment"]],
-  run:async()=>{ await humanTapDraw(); TUT.rigFan=["Aurum","Lignum","Rubrum","Metallum","Blank Parchment","Forgotten Goblet","Dusty Candelabra","Blank Parchment"]; },
+  run:async()=>{ await humanTapDraw(); TUT.rigFan=["Blank Parchment","Forgotten Goblet","Aurum","Dusty Candelabra","Lignum","Blank Parchment","Rubrum","Metallum"]; },
   text:`Ваш ход — возьмите карту, затем <b>бейте всем сразу</b>. Восемь краж: отразит ли она своей Деванте… или рискнёт?`,
   hint:`Fairy Queen + Getergrin + оба Заклинания → атака → все 8 — Ведьме.`,
   done:`Ограблена — <b>ЧЕТЫРЕ книги ваши, Metallum наконец дома!</b> У неё остался лишь <b>Aurantiaco</b>… и она поворачивается к вам в ярости.`},
@@ -2303,7 +2391,7 @@ const TUT_STEPS=[
     await resolveSpellOnTargets(rival,{0:3},4,3);
     S.busy=false; tutActionDone();
   },
-  done:`Герой ответил — и <b>сгорел</b>. У силы есть цена. Но считайте: <b>три книги против её одной</b>.`},
+  done:`Мощно — но вы <b>сожгли сокровище</b> ради этого. Помните: во всей игре лишь <b>ВОСЕМЬ</b> Деванте, и победит тот, у кого их больше в конце. (У вас три; у неё одна.)`},
  {expect:null,
   run:async()=>{
     const me=S.players[0], w=S.players[1];
@@ -2313,7 +2401,7 @@ const TUT_STEPS=[
     try{ $("collectPile").classList.remove("tut-circle"); }catch(e){}
     /* the scoreboard: hands turn over, the Devante fly home to the count */
     const ov=document.createElement("div");
-    ov.style.cssText="position:fixed;inset:0;z-index:240;background:rgba(8,7,3,.94);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:18px";
+    ov.style.cssText="position:fixed;inset:0;z-index:240;background:rgba(8,7,3,.94);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:14px;padding:34px 14px 20px;overflow-y:auto";
     ov.innerHTML=`<div style="font-family:Cinzel,serif;font-size:20px;color:var(--brass-hi);letter-spacing:.14em">СЧЁТ</div>`;
     const mkSide=(nm)=>{ const sd=document.createElement("div");
       sd.style.cssText="display:flex;flex-direction:column;align-items:center;gap:6px;min-width:120px";
@@ -2332,29 +2420,29 @@ const TUT_STEPS=[
     const revealSide=async(p,side,label)=>{
       hint.textContent=label; handRow.innerHTML="";
       const cards=p.hand.slice(0,12);
-      for(const c of cards){ const el=cardEl(c); el.style.width="50px"; el.style.height="84px";
+      for(const c of cards){ const el=cardEl(c); el.style.width="44px"; el.style.height="74px";
         if(c.kind==="devante") el.classList.add("shimmer");
-        handRow.appendChild(el); playSfx("deal"); await pause(150); }
-      await pause(520);
+        handRow.appendChild(el); playSfx("deal"); await pause(240); }
+      await pause(850);
       const devIdx=cards.map((c,i)=>c.kind==="devante"?i:-1).filter(i=>i>=0);
       const slot=side.querySelector(".scRow"), num=side.querySelector(".scNum");
       for(let k=0;k<devIdx.length;k++){
         const i=devIdx[k], srcEl=handRow.children[i], c=cards[i];
         const r=srcEl.getBoundingClientRect(), tr=slot.getBoundingClientRect();
         const fly=cardEl(c); fly.classList.add("fx-card","shimmer");
-        fly.style.cssText+=`left:${r.left}px;top:${r.top}px;width:50px;height:84px;z-index:250`;
+        fly.style.cssText+=`left:${r.left}px;top:${r.top}px;width:44px;height:74px;z-index:250`;
         document.body.appendChild(fly);
         requestAnimationFrame(()=>{ fly.style.left=(tr.left+k*42)+"px"; fly.style.top=(tr.top)+"px";
           fly.style.width="38px"; fly.style.height="64px"; });
         srcEl.style.opacity="0.22";
         playSfx("found");
-        await pause(460);
+        await pause(820);
         fly.remove();
         const mini=cardEl(c); mini.style.width="38px"; mini.style.height="64px"; slot.appendChild(mini);
         num.textContent=String(k+1);
       }
       [...handRow.children].forEach(el=>el.style.opacity="0.22");
-      await pause(450);
+      await pause(800);
     };
     await revealSide(me,sideMe,"ваша рука открывается…");
     await revealSide(w,sideW,"рука Ведьмы открывается…");
