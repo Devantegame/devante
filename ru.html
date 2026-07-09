@@ -2321,24 +2321,58 @@ const TUT_STEPS=[
   done:`Щиты кормятся первыми — а затем видение: <b>ПЯТЬ книг!</b> Теперь ясно, кого грабить.`},
  {expect:null,
   run:async()=>{
+    const fx=$("playFx"), who=$("playFxWho"), sub=$("playFxText"), wrap=$("playFxCards");
+    const tap=()=>new Promise(r=>{ fx.onclick=()=>{ fx.onclick=null; r(); }; });
+    const show=(t,st)=>{ if(who) who.innerHTML=t; if(sub) sub.innerHTML=st||""; };
+    const put=(cards,small)=>{ wrap.innerHTML=""; cards.forEach(c=>{ const el=cardEl(c);
+        if(small){ el.style.width="54px"; el.style.height="90px"; }
+        wrap.appendChild(el); }); return [...wrap.children]; };
+    const oldWrapCss=wrap.style.cssText;
     try{
-      const fx=$("playFx"); const title=fx.querySelector(".pfw"); const wrap=$("playFxCards");
-      if(title) title.innerHTML="Священные пары";
-      if(wrap){ wrap.innerHTML="";
-        const ar=()=>{ const a=document.createElement("div");
-          a.style.cssText="align-self:center;font-size:30px;color:var(--brass-hi);text-shadow:0 0 12px rgba(232,207,142,.8)";
-          a.textContent="\u279C"; return a; };
-        wrap.appendChild(cardEl(mk("character","Diamone"))); wrap.appendChild(ar()); wrap.appendChild(cardEl(mk("ability","crystal")));
-        const gap=document.createElement("div"); gap.style.cssText="width:26px"; wrap.appendChild(gap);
-        wrap.appendChild(cardEl(mk("character","Odorf"))); wrap.appendChild(ar()); wrap.appendChild(cardEl(mk("ability","potion")));
-        [...wrap.children].forEach(el=>el.classList&&el.classList.add("shimmer"));
-      }
+      wrap.style.maxHeight="48vh"; wrap.style.overflowY="auto"; wrap.style.flexWrap="wrap";
       fx.classList.add("on");
-      await new Promise(res=>{ fx.onclick=()=>{ fx.onclick=null; res(); }; });
-      fx.classList.remove("on");
+      // beat 1 — the whole cast
+      const mains=CHARACTERS.filter(c=>!c.assistant).map(c=>mk("character",c.name));
+      const assts=CHARACTERS.filter(c=>c.assistant).map(c=>mk("character",c.name));
+      show(`Знакомьтесь: труппа`,`каждый персонаж существует лишь в <b>ОДНОМ</b> экземпляре — все ведьмы, волшебники и помощники…`);
+      const els=put([...mains,...assts],true);
+      playSfx("deal");
+      await tap();
+      // beat 2 — the assistants remain
+      els.forEach((el,i)=>{ if(i<mains.length){ el.style.opacity="0.12"; } else { el.classList.add("shimmer"); } });
+      show(`Помощники`,`Getergrin, Smookers, Rupert — они не действуют в одиночку. Добавьте помощника к персонажу и способности — и весь ход <b>удвоится</b>`);
+      playSfx("found");
+      await tap();
+      // beat 3 — the abilities
+      show(`Способности`,`Заклинание · Метла · Хрустальный шар · Зелье — способность служит лишь персонажу с <b>совпадающим медальоном</b>`);
+      put([mk("ability","spell"),mk("ability","broomstick"),mk("ability","crystal"),mk("ability","potion")]);
+      playSfx("deal");
+      await tap();
+      // beat 4 — the exclusive pairs, each on its own line
+      show(`Две исключительные власти`,`лишь <b>Diamone</b> владеет Хрустальным шаром · лишь <b>Odorf</b> варит Зелье — и никто иной, никогда`);
+      wrap.innerHTML="";
+      const row=(chN,abS)=>{ const r=document.createElement("div");
+        r.style.cssText="display:flex;gap:12px;align-items:center;justify-content:center;width:100%;margin:4px 0";
+        r.appendChild(cardEl(mk("character",chN)));
+        const a=document.createElement("div");
+        a.style.cssText="font-size:30px;color:var(--brass-hi);text-shadow:0 0 12px rgba(232,207,142,.8)";
+        a.textContent="\u279C"; r.appendChild(a);
+        const ab=cardEl(mk("ability",abS)); r.appendChild(ab);
+        return r; };
+      wrap.appendChild(row("Diamone","crystal"));
+      wrap.appendChild(row("Odorf","potion"));
+      playSfx("crystal");
+      await tap();
+      // beat 5 — the dross
+      show(`И хлам`,`бесполезные предметы — удобная <b>приманка для воров</b> вместо ваших сокровищ`);
+      put(OBJECTS.slice(0,4).map(o=>mk("object",o.name)));
+      playSfx("discard");
+      await tap();
     }catch(e){}
+    fx.classList.remove("on");
+    wrap.style.cssText=oldWrapCss;
   },
-  text:`Пришло <b>Зелье</b> — но зельями владеет лишь <b>Odorf</b>, а его она потратила на свой щит. Пары нерушимы: <b>Diamone \u279C Шар · Odorf \u279C Зелье</b>.`},
+  text:`Пришло <b>Зелье</b> — но вашего Odorf она потратила на щит, так что оно подождёт. Теперь вы знакомы с каждой картой игры… а <b>Деванте</b> вы уже знаете. Назад к дуэли!`},
  {expect:"defend",
   text:`Её ход — <b>держитесь!</b> Отражайте с <b>Hereto</b> и мётлами.`,
   script:async()=>{

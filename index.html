@@ -2318,24 +2318,58 @@ const TUT_STEPS=[
   done:`Shields feed first — then the vision: <b>FIVE spellbooks!</b> Now we know whom to rob.`},
  {expect:null,
   run:async()=>{
+    const fx=$("playFx"), who=$("playFxWho"), sub=$("playFxText"), wrap=$("playFxCards");
+    const tap=()=>new Promise(r=>{ fx.onclick=()=>{ fx.onclick=null; r(); }; });
+    const show=(t,st)=>{ if(who) who.innerHTML=t; if(sub) sub.innerHTML=st||""; };
+    const put=(cards,small)=>{ wrap.innerHTML=""; cards.forEach(c=>{ const el=cardEl(c);
+        if(small){ el.style.width="54px"; el.style.height="90px"; }
+        wrap.appendChild(el); }); return [...wrap.children]; };
+    const oldWrapCss=wrap.style.cssText;
     try{
-      const fx=$("playFx"); const title=fx.querySelector(".pfw"); const wrap=$("playFxCards");
-      if(title) title.innerHTML="The sacred pairs";
-      if(wrap){ wrap.innerHTML="";
-        const ar=()=>{ const a=document.createElement("div");
-          a.style.cssText="align-self:center;font-size:30px;color:var(--brass-hi);text-shadow:0 0 12px rgba(232,207,142,.8)";
-          a.textContent="\u279C"; return a; };
-        wrap.appendChild(cardEl(mk("character","Diamone"))); wrap.appendChild(ar()); wrap.appendChild(cardEl(mk("ability","crystal")));
-        const gap=document.createElement("div"); gap.style.cssText="width:26px"; wrap.appendChild(gap);
-        wrap.appendChild(cardEl(mk("character","Odorf"))); wrap.appendChild(ar()); wrap.appendChild(cardEl(mk("ability","potion")));
-        [...wrap.children].forEach(el=>el.classList&&el.classList.add("shimmer"));
-      }
+      wrap.style.maxHeight="48vh"; wrap.style.overflowY="auto"; wrap.style.flexWrap="wrap";
       fx.classList.add("on");
-      await new Promise(res=>{ fx.onclick=()=>{ fx.onclick=null; res(); }; });
-      fx.classList.remove("on");
+      // beat 1 — the whole cast
+      const mains=CHARACTERS.filter(c=>!c.assistant).map(c=>mk("character",c.name));
+      const assts=CHARACTERS.filter(c=>c.assistant).map(c=>mk("character",c.name));
+      show(`Meet the cast`,`there is only <b>ONE</b> of each character in the whole deck — every witch, wizard and helper…`);
+      const els=put([...mains,...assts],true);
+      playSfx("deal");
+      await tap();
+      // beat 2 — the assistants remain
+      els.forEach((el,i)=>{ if(i<mains.length){ el.style.opacity="0.12"; } else { el.classList.add("shimmer"); } });
+      show(`The Assistants`,`Getergrin, Smookers, Rupert — they never act alone. Pair one with a character and an ability, and the whole play <b>doubles</b>`);
+      playSfx("found");
+      await tap();
+      // beat 3 — the abilities
+      show(`The Abilities`,`Spell · Broomstick · Crystal Ball · Potion — an ability only serves a character with the <b>matching medallion</b>`);
+      put([mk("ability","spell"),mk("ability","broomstick"),mk("ability","crystal"),mk("ability","potion")]);
+      playSfx("deal");
+      await tap();
+      // beat 4 — the exclusive pairs, each on its own line
+      show(`Two exclusive commands`,`only <b>Diamone</b> may wield the Crystal Ball · only <b>Odorf</b> may brew the Potion — no one else, ever`);
+      wrap.innerHTML="";
+      const row=(chN,abS)=>{ const r=document.createElement("div");
+        r.style.cssText="display:flex;gap:12px;align-items:center;justify-content:center;width:100%;margin:4px 0";
+        r.appendChild(cardEl(mk("character",chN)));
+        const a=document.createElement("div");
+        a.style.cssText="font-size:30px;color:var(--brass-hi);text-shadow:0 0 12px rgba(232,207,142,.8)";
+        a.textContent="\u279C"; r.appendChild(a);
+        const ab=cardEl(mk("ability",abS)); r.appendChild(ab);
+        return r; };
+      wrap.appendChild(row("Diamone","crystal"));
+      wrap.appendChild(row("Odorf","potion"));
+      playSfx("crystal");
+      await tap();
+      // beat 5 — the dross
+      show(`And the dross`,`worthless Objects — handy <b>bait for thieving rivals</b>, spent instead of your treasures`);
+      put(OBJECTS.slice(0,4).map(o=>mk("object",o.name)));
+      playSfx("discard");
+      await tap();
     }catch(e){}
+    fx.classList.remove("on");
+    wrap.style.cssText=oldWrapCss;
   },
-  text:`A <b>Potion</b> arrived — but only <b>Odorf</b> commands potions, and she spent yours on her shield. Matching pairs, always: <b>Diamone \u279C Crystal · Odorf \u279C Potion</b>.`},
+  text:`A <b>Potion</b> arrived — but she spent your Odorf on her shield, so it waits. You have now met every card in the game… and the <b>Devante</b> you know already. Back to the duel!`},
  {expect:"defend",
   text:`Her turn — <b>brace!</b> Deflect with <b>Hereto</b> and your broomsticks.`,
   script:async()=>{
