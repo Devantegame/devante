@@ -147,6 +147,9 @@
   .card.sel{transform:translateY(-20px);border-color:var(--teal);outline:2.5px solid var(--teal);
     box-shadow:0 8px 20px rgba(0,0,0,.65),0 0 18px rgba(126,192,188,.75)}
   .card.sel.tut-glow{animation:none;outline-color:var(--teal)}
+  .mm-zoom .tchip{outline:3px solid #e0654a;border-radius:50%;
+    box-shadow:0 0 16px rgba(224,101,74,.95);animation:mmPulse .9s ease infinite}
+  @keyframes mmPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.3)}}
   .card .tag{
     position:absolute;bottom:0;left:0;right:0;background:rgba(12,11,6,.82);border-radius:0 0 7px 7px;
     font-family:'Cinzel',serif;font-size:8.5px;font-weight:700;letter-spacing:.05em;
@@ -894,8 +897,23 @@ function renderActions(){
       bar.innerHTML=`<div class="hint">${ch.name} не может использовать карты «${TRAIT_LABEL[sub]}» — способности должны совпадать.</div>`;
       if(TUT&&TUT_STEPS[TUT.i]&&TUT_STEPS[TUT.i].expect==="mismatch"&&!TUT._mm){
         TUT._mm=1;
-        (async()=>{ S.busy=true; render();
-          await showPlay("Не совпадают!", `их медальоны не совпадают — каждой способностью владеет лишь свой персонаж`, [ch, a.abils[0]].filter(Boolean));
+        (async()=>{ S.busy=true;
+          TUT.glowNames=new Set(); S.sel.clear(); render();   // lesson learned: the bouncing stops
+          const fx=$("playFx"); fx.classList.add("drama");
+          const abil=a.abils[0];
+          const pr=showPlay("Не совпадают!", `их медальоны не совпадают — каждой способностью владеет лишь свой персонаж`, [ch, abil].filter(Boolean));
+          requestAnimationFrame(()=>{ try{
+            [...$("playFxCards").children].forEach((el,idx)=>{
+              el.classList.add("mm-zoom");
+              if(!el.querySelector(".trait-chips")){
+                const chips=document.createElement("div"); chips.className="trait-chips";
+                const ic=document.createElement("div"); ic.className="tchip "+(abil?abil.sub:"crystal");
+                chips.appendChild(ic); el.appendChild(chips);
+              }
+            });
+          }catch(e){} });
+          await pr;
+          fx.classList.remove("drama");
           S.busy=false; tutActionDone(); })();
       }
     } else if(sub==="spell"){
@@ -1260,7 +1278,7 @@ function humanDefend(def,att,units,attackType,abilityCount){
     }
     const skip=document.createElement("button");skip.className="abtn danger";skip.style.width="100%";skip.style.marginTop="8px";
     skip.textContent="Принять удар";
-    skip.onclick=()=>{$("modal").classList.remove("on");res(units);};
+    skip.onclick=()=>{ if(TUT){ toast(`Не в этот раз — защищайтесь!`); return; } $("modal").classList.remove("on");res(units); };
     box.appendChild(skip);
     $("modal").classList.add("on");
   });
@@ -2140,12 +2158,12 @@ const TUT_STEPS=[
     fx.classList.remove("on");
   },
   text:`Восемь книг заклинаний. Держите больше всех, когда Добор иссякнет — и победа ваша. Одна уже светится в вашей руке… <b>берегите её</b>.`},
- {expect:null, rig:[["character","Hereto"]],
-  run:async()=>{ await humanTapDraw(); },
-  text:`К вам приходит <b>Hereto</b>. Хотите сыграть?`},
- {expect:"mismatch", glow:["Hereto","Хрустальный шар"],
-  intro:async()=>{ await showPlay("Попробуйте вместе","выберите светящихся <b>Hereto</b> и <b>Хрустальный шар</b> — взгляните на медальоны",[mk("character","Hereto"),mk("ability","crystal")]); },
-  text:`Коснитесь светящегося <b>Hereto</b>, затем светящегося <b>Хрустального шара</b>.`,
+ {expect:"mismatch", glow:["Hereto","Хрустальный шар"], rig:[["character","Hereto"]],
+  run:async()=>{
+    await humanTapDraw();
+    await showPlay("Попробуйте вместе","пришёл <b>Hereto</b>. Выберите светящихся <b>Hereto</b> и <b>Хрустальный шар</b> — взгляните на медальоны",[mk("character","Hereto"),mk("ability","crystal")]);
+  },
+  text:`Ваш ход начался как любой другой — <b>вы взяли карту</b>. Теперь коснитесь светящегося <b>Hereto</b>, затем светящегося <b>Хрустального шара</b>.`,
   hint:`Выберите Hereto и Хрустальный шар вместе.`,
   done:`Медальоны должны совпадать — шаром владеет лишь одна ведьма. Запомните её: <b>Diamone</b>.`},
  {expect:"discard", discardOnly:true, glow:["Dusty Candelabra"],
@@ -2165,6 +2183,11 @@ const TUT_STEPS=[
     w.hand.push(...stolen); TUT.forceSteal=null; render();
   },
   text:`Книга И Odorf — вы видели, как они покинули вашу руку. Запомните этот укол. Мы всё вернём.`},
+ {expect:"discard", discardOnly:true, glow:["Forgotten Goblet"], rig:[["ability","crystal"]],
+  run:async()=>{ await humanTapDraw(); },
+  text:`Ваш ход: вы взяли <b>второй Хрустальный шар</b>! Но его хозяйки нет, а зелье без Odorf бесполезно. <b>Сбросьте последний хлам.</b>`,
+  hint:`Коснитесь светящегося предмета, затем «Сбросить».`,
+  done:`Терпение. Части сходятся.`},
  {expect:null,
   run:async()=>{
     const w=S.players[1];
@@ -2204,7 +2227,7 @@ const TUT_STEPS=[
     await showPlay(w.name, `о нет — у неё было <b>Зелье</b>, и она поставила <b>щит</b> с вашим Odorf! Придётся сперва пробиться.`, []);
   },
   text:`Теперь её хранит стоячий <b>щит</b> — атаки должны сперва прожечь его.`},
- {expect:null, rig:[["character","Diamone"]],
+ {expect:"crystal", requireAbil:2, rig:[["ability","broomstick"],["ability","broomstick"],["object","Blank Parchment"]], glow:["Diamone","Хрустальный шар"],
   run:async()=>{
     await humanTapDraw();
     try{
@@ -2221,26 +2244,11 @@ const TUT_STEPS=[
       await new Promise(res=>{ fx.onclick=()=>{ fx.onclick=null; res(); }; });
       fx.classList.remove("on");
     }catch(e){}
-    toast("Повезло — Хрустальный шар ждёт в вашей руке. Посмотрим, что прячет Ведьма…");
+    toast("Повезло — в вашей руке ждут ДВА Хрустальных шара.");
   },
-  glow:["Diamone"],
-  text:`Медальоны совпадают — <b>Diamone ➜ Хрустальный шар</b>. Вы знаете, что делать.`},
- {expect:"crystal", requireAbil:1, rig:[["character","Diamone"],["ability","crystal"]], glow:["Diamone","Хрустальный шар"],
-  text:`<b>Загляните к Ведьме.</b> Её щит стоит — смотрите, что будет.`,
-  hint:`Diamone + Хрустальный шар, затем единицу — Ведьме.`,
-  done:`<b>ХРУСТЬ</b> — её зелье <b>пожрало ваш взор</b>. Щиты кормятся первыми; Odorf падает в Сброс вместе с ним. Стена пала… и смотрите — судьба вернула <b>Diamone</b> со свежим шаром.`},
- {expect:null,
-  run:async()=>{
-    const w=S.players[1];
-    await showPlay(w.name, `её ход — она хихикает, берёт карты и выжидает…`, []);
-    w.hand.push(mk("object","Blank Parchment"),mk("object","Dusty Candelabra")); render();
-    await pause(400);
-  },
-  text:`Её клад растёт. Доведите дело до конца.`},
- {expect:"crystal", requireAbil:1, rig:[["ability","broomstick"],["ability","broomstick"]], glow:["Diamone","Хрустальный шар"],
-  text:`<b>Загляните снова</b> — теперь между вами нет щита.`,
-  hint:`Diamone + Хрустальный шар → единицу — Ведьме.`,
-  done:`<b>ПЯТЬ книг!</b> Она копит — теперь ясно, кого грабить. А восполнение принесло <b>мётлы</b>. Судьба щедра.`},
+  text:`Сыграйте <b>Diamone с ОБОИМИ Хрустальными шарами</b> — один взор на её щит, второй на её тайны.`,
+  hint:`Diamone + оба Хрустальных шара → обе единицы — Ведьме.`,
+  done:`<b>ХРУСТЬ</b> — первый взор сжёг её зелье (щиты кормятся первыми; Odorf падает вместе с ним). Второй увидел всё: <b>ПЯТЬ книг!</b> Теперь ясно, кого грабить. А восполнение принесло <b>мётлы</b> — судьба щедра.`},
  {expect:"defend",
   text:`Её ход — <b>держитесь!</b> Отражайте с <b>Hereto</b> и мётлами.`,
   script:async()=>{
@@ -2257,18 +2265,24 @@ const TUT_STEPS=[
     S.busy=false; tutActionDone();
   },
   done:`Отражено — её заклинания сметены в полёте! Каждая карта защиты восполнена после; защита не тратит ваш ход.`},
- {expect:null, rig:[["dragon","Dragon"]],
-  run:async()=>{ await humanTapDraw(); },
-  text:`<b>Дракон</b>! Он возвращает себя четырёхкратно.`},
- {expect:"dragon", glow:["Dragon"], rig:[["character","Fairy Queen"],["character","Getergrin"],["ability","spell"],["ability","spell"]],
-  text:`<b>Выпустите Дракона.</b>`,
+ {expect:"dragon", glow:["Dragon"], rig:[["dragon","Dragon"]],
+  run:async()=>{ await humanTapDraw(); TUT.rig=[mk("character","Fairy Queen"),mk("character","Getergrin"),mk("ability","spell"),mk("ability","spell")]; },
+  text:`Ваш ход — и колода дарит <b>Дракона</b>! Выпустите его: он возвращает себя четырёхкратно.`,
   hint:`Коснитесь Дракона, затем «Выпустить».`,
   done:`Fairy Queen <b>×2</b>. Getergrin <b>×2</b>. Два Заклинания. Считайте сами…`},
+ {expect:null,
+  run:async()=>{
+    const w=S.players[1];
+    await showPlay(w.name, `её ход — она собирается с силами и бормочет во тьме…`, []);
+    w.hand.push(mk("object","Blank Parchment"),mk("object","Dusty Candelabra")); render();
+    await pause(400);
+  },
+  text:`Её клад разбухает. Пора кончать.`},
  {expect:"spell", requireAbil:2, glow:["Fairy Queen","Getergrin","Заклинание"],
-  run:async()=>{ TUT.rigFan=["Aurum","Lignum","Rubrum","Blank Parchment","Forgotten Goblet","Dusty Candelabra","Blank Parchment","Forgotten Goblet"]; },
-  text:`<b>Бейте всем сразу.</b> Восемь краж — отразит ли она своей Деванте… или рискнёт?`,
+  run:async()=>{ TUT.rigFan=["Aurum","Lignum","Rubrum","Metallum","Blank Parchment","Forgotten Goblet","Dusty Candelabra","Blank Parchment"]; },
+  text:`Ваш ход. <b>Бейте всем сразу.</b> Восемь краж — отразит ли она своей Деванте… или рискнёт?`,
   hint:`Fairy Queen + Getergrin + оба Заклинания → атака → все 8 — Ведьме.`,
-  done:`Ограблена — <b>три книги</b> ваши! Но две она прижала к груди, ваш <b>Metallum</b> среди них. Это ещё не конец…`},
+  done:`Ограблена — <b>ЧЕТЫРЕ книги ваши, Metallum наконец дома!</b> У неё остался лишь <b>Aurantiaco</b>… и она поворачивается к вам в ярости.`},
  {expect:"defend",
   text:`Она бьёт в <b>ярости</b> — ответьте героем! <b>Отразите всё картой Деванте.</b>`,
   script:async()=>{
@@ -2283,23 +2297,21 @@ const TUT_STEPS=[
     await resolveSpellOnTargets(rival,{0:3},4,3);
     S.busy=false; tutActionDone();
   },
-  done:`Герой ответил — и <b>сгорел</b>. У силы есть цена. В вашей руке осталось две книги… и две — у неё.`},
+  done:`Герой ответил — и <b>сгорел</b>. У силы есть цена. Но считайте: <b>три книги против её одной</b>.`},
  {expect:null,
   run:async()=>{
     const me=S.players[0], w=S.players[1];
+    S.collect.length=0; render();
     await showPlay("Добор пуст!", `колода иссякла — считаем книги заклинаний!`, []);
     const myDevs=me.hand.filter(c=>c.kind==="devante");
     const herDevs=w.hand.filter(c=>c.kind==="devante");
-    await showPlay("Счёт", `У вас: <b>${myDevs.length}</b> · У Ведьмы: <b>${herDevs.length}</b> — <b>НИЧЬЯ</b>?!`, [...myDevs,...herDevs]);
-    playSfx("found");
-    const best=myDevs.sort((a,b)=>a.rank-b.rank)[0];
-    await showPlay("Но постойте…", `ничью решает ранг — и ваш <b>${best?best.name:"Aurum"} (ранг ${best?best.rank:2})</b> старше её лучшей. <b>Повезло.</b>`, best?[best]:[]);
+    await showPlay("Счёт", `У вас: <b>${myDevs.length}</b> · У Ведьмы: <b>${herDevs.length}</b>`, [...myDevs,...herDevs]);
     playSfx("victory");
     const fx=$("playFx"); fx.classList.add("drama");
-    await showPlay("ПОБЕДА", `ничья падает в вашу сторону — книги заклинаний ваши`, myDevs);
+    await showPlay("ПОБЕДА", `клад ваш — Ведьма перехитрена`, myDevs);
     fx.classList.remove("drama");
   },
-  text:`Вот и вся игра. Добор пуст → больше книг — победа → <b>ничью решает ранг</b> — вы только что это прожили.<br><br><b>Двойное касание</b> — рассмотреть карту · нота и динамик — звук · <b>⏱</b> — скорость. Первый настоящий бой ждёт.`, finale:true},
+  text:`Вот и вся игра. Добор пуст → больше книг — победа. (А при ничьей побеждает <b>лучший ранг</b>.)<br><br><b>Двойное касание</b> — рассмотреть карту · нота и динамик — звук · <b>⏱</b> — скорость. Первый настоящий бой ждёт.`, finale:true},
 ];
 function startTutorial(){
   S={players:[
