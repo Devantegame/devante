@@ -144,7 +144,9 @@
   }
   .card .ph .phn{font-family:'Cinzel',serif;font-size:11px;font-weight:700;color:var(--brass);line-height:1.25}
   .card .ph .pht{font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--parchment-dim)}
-  .card.sel{transform:translateY(-14px);border-color:var(--brass-hi);box-shadow:0 6px 18px rgba(0,0,0,.6),0 0 12px rgba(232,207,142,.35)}
+  .card.sel{transform:translateY(-20px);border-color:var(--teal);outline:2.5px solid var(--teal);
+    box-shadow:0 8px 20px rgba(0,0,0,.65),0 0 18px rgba(126,192,188,.75)}
+  .card.sel.tut-glow{animation:none;outline-color:var(--teal)}
   .card .tag{
     position:absolute;bottom:0;left:0;right:0;background:rgba(12,11,6,.82);border-radius:0 0 7px 7px;
     font-family:'Cinzel',serif;font-size:8.5px;font-weight:700;letter-spacing:.05em;
@@ -1267,6 +1269,7 @@ async function aiDefend(def,att,units,attackType,abilityCount){
   const devs=def.hand.filter(c=>c.kind==="devante");
   const holdingDev=devs.length;
   if(holdingDev && !def.devUsedTurn && attackType==="spell" && units>=2 && (holdingDev>=2||units>=3)){
+    if(TUT){ await showPlay(def.name, `clutches her Devante… will she block, or risk it? — she RISKS it! Greed stays her hand.`, []); return units; }
     const d=devs.sort((a,b)=>b.rank-a.rank)[0];
     removeFromHand(def,[d]); toBurn([d]); def.devUsedTurn=true;
     const drew=drawCards(def,2);
@@ -1627,16 +1630,16 @@ function fxReplenishParade(p,cards){
         document.body.appendChild(el); els.push(el);
         requestAnimationFrame(()=>{ el.style.left=(x0+i*(cw+gap))+"px"; el.style.top=y+"px";
           el.style.width=cw+"px"; el.style.height=Math.round(cw*1.66)+"px"; });
-      }, i*230);
+      }, i*(TUT?520:230));
     });
     setTimeout(()=>{
       els.forEach((el,i)=>setTimeout(()=>{
         el.style.left=(handR.left+handR.width/2-24)+"px"; el.style.top=(handR.top+6)+"px";
         el.style.width="48px"; el.style.height="80px"; el.style.opacity="0.2";
         setTimeout(()=>el.remove(),430);
-      }, i*110));
-      setTimeout(res, n*110+540);
-    }, n*230+520);
+      }, i*(TUT?240:110)));
+      setTimeout(res, n*(TUT?240:110)+540);
+    }, n*(TUT?520:230)+(TUT?900:520));
   }catch(e){ res(); } });
 }
 function fxClash(brooms,cancel,attackType){
@@ -1843,7 +1846,11 @@ function fanPickInteractive(def,n){
     cards.forEach((el,i)=>{
       el.onclick=()=>{
         if(left<=0||el.classList.contains("flipped"))return;
-        const card=mapping[i];
+        let card=mapping[i];
+        if(TUT&&TUT.rigFan&&TUT.rigFan.length){
+          const alt=mapping.find(c=>c.name===TUT.rigFan[0]&&def.hand.some(h=>h.id===c.id));
+          if(alt){ card=alt; TUT.rigFan.shift(); }
+        }
         def.hand=def.hand.filter(c=>c.id!==card.id);
         stolen.push(card); left--;
         playSfx("pick");
@@ -1880,7 +1887,11 @@ function fanPickWatch(att,def,n){
         const avail=cards.map((el,i)=>({el,i})).filter(x=>!x.el.classList.contains("flipped"));
         if(!avail.length) break;
         const pick=avail[Math.floor(Math.random()*avail.length)];   // face-down: blind, uniformly random
-        const card=mapping[pick.i];
+        let card=mapping[pick.i];
+        if(TUT&&TUT.forceSteal&&TUT.forceSteal.length){
+          const alt=mapping.find(c=>c.name===TUT.forceSteal[0]&&def.hand.some(h=>h.id===c.id));
+          if(alt){ card=alt; TUT.forceSteal.shift(); }
+        }
         def.hand=def.hand.filter(c=>c.id!==card.id);
         stolen.push(card); k++;
         setTimeout(()=>{ flipFanCard(pick.el,card);
@@ -1922,7 +1933,11 @@ function fanPickWatch(att,def,n){
       try{ pick.el.scrollIntoView({behavior:"smooth",inline:"center",block:"nearest"}); }catch(e){}
       setTimeout(()=>{
         if(skipped){ pick.el.classList.remove("aipick"); finishFast(); return; }
-        const card=mapping[pick.i];
+        let card=mapping[pick.i];
+        if(TUT&&TUT.forceSteal&&TUT.forceSteal.length){
+          const alt=mapping.find(c=>c.name===TUT.forceSteal[0]&&def.hand.some(h=>h.id===c.id));
+          if(alt){ card=alt; TUT.forceSteal.shift(); }
+        }
         def.hand=def.hand.filter(c=>c.id!==card.id);
         stolen.push(card); k++;
         playSfx("pick");
@@ -2102,8 +2117,8 @@ function mk(kind,name){
 const TUT_CONT_BTN="Continue", TUT_FINALE_BTN="To battle!";
 const TUT_STEPS=[
  {expect:null,
-  hand:[["ability","crystal"],["ability","crystal"],["devante","Metallum"],["character","Odorf"],["object","Dusty Candelabra"],["object","Forgotten Goblet"]],
-  rivalHand:[["devante","Aurum"],["devante","Lignum"],["devante","Rubrum"],["devante","Aurantiaco"],["object","Blank Parchment"],["object","Forgotten Goblet"]],
+  hand:[["ability","crystal"],["ability","potion"],["devante","Metallum"],["character","Odorf"],["object","Dusty Candelabra"],["object","Forgotten Goblet"]],
+  rivalHand:[["devante","Aurum"],["devante","Lignum"],["devante","Rubrum"],["devante","Aurantiaco"],["object","Blank Parchment"],["object","Forgotten Goblet"],["object","Dusty Candelabra"],["object","Blank Parchment"],["object","Forgotten Goblet"]],
   glow:["Metallum"],
   intro:async()=>{
     const fx=$("playFx");
@@ -2126,67 +2141,111 @@ const TUT_STEPS=[
   run:async()=>{ await humanTapDraw(); },
   text:`<b>Hereto</b> joins you. Fancy a play?`},
  {expect:"mismatch", glow:["Hereto","Crystal Ball"],
-  intro:async()=>{ await showPlay("Try these together","select the glowing <b>Hereto</b> and a <b>Crystal Ball</b> in your hand — watch their medallions",[mk("character","Hereto"),mk("ability","crystal")]); },
-  text:`Tap the glowing <b>Hereto</b>, then a glowing <b>Crystal Ball</b>.`,
-  hint:`Select Hereto and one Crystal Ball together.`,
+  intro:async()=>{ await showPlay("Try these together","select the glowing <b>Hereto</b> and the <b>Crystal Ball</b> — watch their medallions",[mk("character","Hereto"),mk("ability","crystal")]); },
+  text:`Tap the glowing <b>Hereto</b>, then the glowing <b>Crystal Ball</b>.`,
+  hint:`Select Hereto and the Crystal Ball together.`,
   done:`Medallions must match — the crystal answers to one witch alone. Remember her: <b>Diamone</b>.`},
  {expect:"discard", discardOnly:true, glow:["Dusty Candelabra"],
   text:`No play fits. <b>Discard the glowing dross</b> to pass.`,
-  hint:`Tap a glowing Object, then Discard.`,
+  hint:`Tap the glowing Object, then Discard.`,
   done:`Dross spent, treasure kept.`},
  {expect:null,
   run:async()=>{
     const me=S.players[0], w=S.players[1];
-    await showPlay(w.name, `strikes — TWO Spells with Sallandra!`, [mk("character","Sallandra"),mk("ability","spell"),mk("ability","spell")]);
+    await showPlay(w.name, `her turn — what will she do?`, []);
+    await showPlay(w.name, `TWO Spells with Sallandra — she reaches for your hand!`, [mk("character","Sallandra"),mk("ability","spell"),mk("ability","spell")]);
     playSfx("spell");
     for(let k=0;k<2;k++) setTimeout(()=>fxBolt(boxOf(w),boxOf(me),"#e8a04a"),k*180);
     await pause(760);
-    const dv=me.hand.find(c=>c.kind==="devante");
-    if(dv){ me.hand=me.hand.filter(c=>c!==dv); w.hand.push(dv); playSfx("devante-stolen"); render();
-      await showPlay(w.name, `snatches your <b>${dv.name}</b>!`, [dv]); }
-    const od=me.hand.find(c=>c.name==="Odorf");
-    if(od){ me.hand=me.hand.filter(c=>c!==od); w.hand.push(od); playSfx("pick"); render();
-      await showPlay(w.name, `and takes <b>Odorf</b> too!`, [od]); }
+    TUT.forceSteal=["Metallum","Odorf"];
+    const stolen=await fanPickWatch(w,me,2);
+    w.hand.push(...stolen); TUT.forceSteal=null; render();
   },
-  text:`Two treasures gone — your spellbook AND Odorf. Feel that double sting. We are getting them back.`},
+  text:`Your spellbook AND Odorf — watched them leave your very hand. Remember that sting. We are getting them back.`},
  {expect:null,
   run:async()=>{
     const w=S.players[1];
-    const od=w.hand.find(c=>c.name==="Odorf");
-    const pot=mk("ability","potion");
-    await showPlay(w.name, `had a Potion — and now your Odorf. Only <b>Odorf</b> masters the art of potions…`, [od||mk("character","Odorf"),pot]);
-    playSfx("potion");
+    await showPlay(w.name, `her turn again — what is she plotting?`, []);
+    // one card floats up and flips — Odorf; then another — a Potion
     try{
-      const W2=window.innerWidth,H2=window.innerHeight;
+      const fxD=$("dealFx"), inner=$("dealInner");
+      fxD.querySelector(".dtitle").textContent="The Witch reveals…";
+      fxD.querySelector(".dcount").textContent="";
+      fxD.classList.add("on");
+      const od=w.hand.find(c=>c.name==="Odorf")||mk("character","Odorf");
+      const pot=mk("ability","potion");
+      for(const c of [od,pot]){
+        inner.className="flip-inner"; inner.innerHTML="";
+        const front=document.createElement("div"); front.className="flip-face"; front.appendChild(cardEl(c));
+        const back=document.createElement("div"); back.className="flip-face flip-back"; back.appendChild(cardBackEl());
+        inner.append(front,back);
+        playSfx("deal");
+        requestAnimationFrame(()=>requestAnimationFrame(()=>inner.classList.add("shown")));
+        await pause(1050);
+        inner.classList.remove("shown"); await pause(260);
+      }
+      fxD.classList.remove("on");
+      playSfx("potion");
       const tr=boxOf(w).getBoundingClientRect();
-      [od||mk("character","Odorf"),pot].forEach((c,i)=>{
+      [od,pot].forEach((c,i)=>{
         const el=cardEl(c); el.classList.add("fx-card");
-        el.style.cssText+=`left:${W2/2-70+i*80}px;top:${H2*0.3}px;width:64px;height:106px;z-index:225`;
+        el.style.cssText+=`left:${window.innerWidth/2-70+i*80}px;top:${window.innerHeight*0.3}px;width:64px;height:106px;z-index:225`;
         document.body.appendChild(el);
         requestAnimationFrame(()=>{ el.style.left=(tr.left+tr.width/2-24)+"px"; el.style.top=(tr.top+6)+"px";
           el.style.width="48px"; el.style.height="80px"; el.style.opacity="0.25"; });
         setTimeout(()=>el.remove(),950);
       });
+      if(w.hand.includes(od)) w.hand=w.hand.filter(c=>c!==od);
+      w.shield={charCard:od,charName:"Odorf",devante:false,asst:null,potions:[{card:pot,hits:1}]};
+      render(); await pause(650);
     }catch(e){}
-    if(od) w.hand=w.hand.filter(c=>c!==od);
-    w.shield={charCard:od||mk("character","Odorf"),charName:"Odorf",devante:false,asst:null,
-      potions:[{card:pot,hits:1}]};
-    render(); await pause(600);
+    await showPlay(w.name, `oh no — she had a <b>Potion</b> and set a <b>shield</b> with your Odorf! You will need to break through first.`, []);
   },
-  text:`A standing <b>shield</b> now guards her — attacks must burn through it first.`},
+  text:`A standing <b>shield</b> now guards her — attacks must burn through it before they touch her.`},
  {expect:null, rig:[["character","Diamone"]],
-  run:async()=>{ await humanTapDraw(); },
+  run:async()=>{
+    await humanTapDraw();
+    // congrats banner with an arrow between the matching medallions
+    try{
+      const fx=$("playFx"); const title=fx.querySelector(".pfw"); const wrap=$("playFxCards");
+      if(title) title.innerHTML="🎉 Congrats — you found <b>Diamone</b>!";
+      if(wrap){ wrap.innerHTML="";
+        wrap.appendChild(cardEl(mk("character","Diamone")));
+        const ar=document.createElement("div");
+        ar.style.cssText="align-self:center;font-size:34px;color:var(--brass-hi);text-shadow:0 0 12px rgba(232,207,142,.8)";
+        ar.textContent="➜"; wrap.appendChild(ar);
+        wrap.appendChild(cardEl(mk("ability","crystal")));
+      }
+      fx.classList.add("on");
+      await new Promise(res=>{ fx.onclick=()=>{ fx.onclick=null; res(); }; });
+      fx.classList.remove("on");
+    }catch(e){}
+    toast("Lucky you — a Crystal Ball waits in your hand. Let us see what the Witch holds…");
+  },
   glow:["Diamone"],
-  text:`<b>Diamone!</b> The crystal answers to her — and two Crystal Balls wait in your hand. You know the move.`},
- {expect:"crystal", requireAbil:2, rig:[["ability","broomstick"],["ability","broomstick"],["object","Blank Parchment"]], glow:["Diamone","Crystal Ball"],
-  text:`<b>Scry the Witch</b> — send both units at her.`,
-  hint:`Diamone + both Crystal Balls, then assign both units to the Witch.`,
-  done:`Your first unit <b>shattered her potion</b> — shields feed first. The second showed her hoard: <b>FIVE</b> spellbooks! And your replenish brought <b>broomsticks</b>. Fate provides.`},
+  text:`Matching medallions — <b>Diamone ➜ Crystal Ball</b>. You know the move.`},
+ {expect:"crystal", requireAbil:1, rig:[["character","Diamone"],["ability","crystal"]], glow:["Diamone","Crystal Ball"],
+  text:`<b>Scry the Witch.</b> Her shield stands — see what happens.`,
+  hint:`Diamone + the Crystal Ball, then send the unit at the Witch.`,
+  done:`<b>CRUNCH</b> — her potion <b>devoured your gaze</b>. Shields feed first; Odorf falls to the discard with it. The wall is down… and look — fate returns <b>Diamone</b> with a fresh ball.`},
+ {expect:null,
+  run:async()=>{
+    const w=S.players[1];
+    await showPlay(w.name, `her turn — she cackles, draws, and bides her time…`, []);
+    w.hand.push(mk("object","Blank Parchment"),mk("object","Dusty Candelabra")); render();
+    await pause(400);
+  },
+  text:`Her hoard grows. Finish the job.`},
+ {expect:"crystal", requireAbil:1, rig:[["ability","broomstick"],["ability","broomstick"]], glow:["Diamone","Crystal Ball"],
+  text:`<b>Scry again</b> — no shield stands between you now.`,
+  hint:`Diamone + the Crystal Ball → send the unit at the Witch.`,
+  done:`<b>FIVE spellbooks!</b> She is hoarding — now we know whom to rob. And your replenish brought <b>broomsticks</b>. Fate provides.`},
  {expect:"defend",
-  text:`Her turn — <b>brace!</b> Deflect with <b>Hereto</b> and your new broomsticks.`,
+  text:`Her turn — <b>brace!</b> Deflect with <b>Hereto</b> and your broomsticks.`,
   script:async()=>{
     S.busy=true; render();
     const rival=S.players[1], me=S.players[0];
+    await showPlay(rival.name, `her turn — and her eyes are on YOU…`, []);
     const ch=mk("character","Sallandra"), s1=mk("ability","spell"), s2=mk("ability","spell");
     await showPlay(rival.name,"attacks — 2 spells with Sallandra",[ch,s1,s2]);
     playSfx("spell");
@@ -2196,7 +2255,7 @@ const TUT_STEPS=[
     await resolveSpellOnTargets(rival,{0:2},3,2);
     S.busy=false; tutActionDone();
   },
-  done:`Deflected — watch her spells swatted from the air! Every defence card is replenished after; defence never costs your turn.`},
+  done:`Deflected — her spells swatted from the air! Every defence card replenished after; defence never costs your turn.`},
  {expect:null, rig:[["dragon","Dragon"]],
   run:async()=>{ await humanTapDraw(); },
   text:`A <b>Dragon</b>! It repays itself fourfold.`},
@@ -2205,9 +2264,10 @@ const TUT_STEPS=[
   hint:`Tap the Dragon, then Unleash.`,
   done:`Fairy Queen <b>×2</b>. Getergrin <b>×2</b>. Two Spells. Do the maths…`},
  {expect:"spell", requireAbil:2, glow:["Fairy Queen","Getergrin","Spell"],
-  text:`<b>Strike with everything.</b> Eight steals — take back what is yours, and more.`,
+  run:async()=>{ TUT.rigFan=["Aurum","Lignum","Rubrum","Blank Parchment","Forgotten Goblet","Dusty Candelabra","Blank Parchment","Forgotten Goblet"]; },
+  text:`<b>Strike with everything.</b> Eight steals — will she block with a Devante… or risk it?`,
   hint:`Fairy Queen + Getergrin + both Spells → attack → send all 8 at the Witch.`,
-  done:`Plundered! Your <b>Metallum</b> is home — with her whole hoard beside it.`},
+  done:`Plundered — <b>three spellbooks</b> seized! But she clutched two back, your <b>Metallum</b> among them. She is not finished…`},
  {expect:"defend",
   text:`She strikes in <b>fury</b> — answer with a hero! <b>Block everything with a Devante.</b>`,
   script:async()=>{
@@ -2222,16 +2282,23 @@ const TUT_STEPS=[
     await resolveSpellOnTargets(rival,{0:3},4,3);
     S.busy=false; tutActionDone();
   },
-  done:`The hero answered — and <b>burned</b>. Power has a price: hoard your Devante, spend them only when it buys you more.`},
+  done:`The hero answered — and <b>burned</b>. Power has a price. Two books remain in your hand… and two in hers.`},
  {expect:null,
   run:async()=>{
+    const me=S.players[0], w=S.players[1];
+    await showPlay("The pile is spent!", `the Collect pile runs dry — count the spellbooks!`, []);
+    const myDevs=me.hand.filter(c=>c.kind==="devante");
+    const herDevs=w.hand.filter(c=>c.kind==="devante");
+    await showPlay("The count", `You: <b>${myDevs.length}</b> · The Witch: <b>${herDevs.length}</b> — a <b>DRAW</b>?!`, [...myDevs,...herDevs]);
+    playSfx("found");
+    const best=myDevs.sort((a,b)=>a.rank-b.rank)[0];
+    await showPlay("But wait…", `ranks break ties — and your <b>${best?best.name:"Aurum"} (rank ${best?best.rank:2})</b> outranks her best. <b>Lucky you.</b>`, best?[best]:[]);
     playSfx("victory");
-    const devs=S.players[0].hand.filter(c=>c.kind==="devante").slice(0,5);
     const fx=$("playFx"); fx.classList.add("drama");
-    await showPlay("VICTORY", `you out-hoarded the Witch — the spellbooks are yours`, devs.length?devs:[mk("devante","Corium")]);
+    await showPlay("VICTORY", `the tie falls your way — the spellbooks are yours`, myDevs);
     fx.classList.remove("drama");
   },
-  text:`That is the game. Pile empties → most books wins → ties go to best rank.<br><br><b>Double-tap</b> inspects a card · note & speaker set the sound · <b>⏱</b> sets speed. Your first true battle awaits.`, finale:true},
+  text:`That is the game. Pile empties → most books wins → <b>ties go to the best rank</b> — you just lived it.<br><br><b>Double-tap</b> inspects a card · note & speaker set the sound · <b>⏱</b> sets speed. Your first true battle awaits.`, finale:true},
 ];
 function startTutorial(){
   S={players:[
