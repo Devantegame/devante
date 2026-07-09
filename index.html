@@ -839,7 +839,7 @@ function render(){
       if(TUT&&TUT.glowNames&&TUT.glowNames.size&&!TUT.glowNames.has(c.name)&&!S.sel.has(c.id)){
         toast(`Slow down, young apprentice — one magical lesson at a time.`); return;
       }
-      if(S.mustDraw){ toast(`Draw a card first — tap the glowing Collect pile.`); return; }
+      if(S.mustDraw){ toast(TUT?`Draw first, young apprentice — let us see what goods we find.`:`Draw a card first — tap the glowing Collect pile.`); return; }
       S.sel.has(c.id)?S.sel.delete(c.id):S.sel.add(c.id); render();
     };
     h.appendChild(el);
@@ -2224,9 +2224,10 @@ const TUT_STEPS=[
     await showPlay(w.name, `oh no — she had a <b>Potion</b> and set a <b>shield</b> with your Odorf! You will need to break through first.`, []);
   },
   text:`A standing <b>shield</b> now guards her — attacks must burn through it before they touch her.`},
- {expect:"crystal", requireAbil:2, rig:[["ability","broomstick"],["ability","broomstick"],["object","Blank Parchment"]], glow:["Diamone","Crystal Ball"],
+ {expect:"crystal", requireAbil:2, rig:[["character","Diamone"]], glow:["Diamone","Crystal Ball"],
   run:async()=>{
     await humanTapDraw();
+    TUT.rig=[mk("ability","broomstick"),mk("ability","broomstick"),mk("object","Blank Parchment")];   // the scry replenish, staged after the draw
     try{
       const fx=$("playFx"); const title=fx.querySelector(".pfw"); const wrap=$("playFxCards");
       if(title) title.innerHTML="🎉 Congrats — you found <b>Diamone</b>!";
@@ -2276,8 +2277,9 @@ const TUT_STEPS=[
   },
   text:`Her hoard swells. Time to end this.`},
  {expect:"spell", requireAbil:2, glow:["Fairy Queen","Getergrin","Spell"],
-  run:async()=>{ TUT.rigFan=["Aurum","Lignum","Rubrum","Metallum","Blank Parchment","Forgotten Goblet","Dusty Candelabra","Blank Parchment"]; },
-  text:`Your turn. <b>Strike with everything.</b> Eight steals — will she block with a Devante… or risk it?`,
+  rig:[["object","Blank Parchment"]],
+  run:async()=>{ await humanTapDraw(); TUT.rigFan=["Aurum","Lignum","Rubrum","Metallum","Blank Parchment","Forgotten Goblet","Dusty Candelabra","Blank Parchment"]; },
+  text:`Your turn — draw, then <b>strike with everything</b>. Eight steals: will she block with a Devante… or risk it?`,
   hint:`Fairy Queen + Getergrin + both Spells → attack → send all 8 at the Witch.`,
   done:`Plundered — <b>FOUR spellbooks seized, your Metallum home at last!</b> She clutches only <b>Aurantiaco</b>… and turns on you with fury.`},
  {expect:"defend",
@@ -2343,13 +2345,14 @@ async function tutNext(){
     potions:Array.from({length:st.rivalShield},()=>({card:mk("ability","potion"),hits:1}))};
   me.devUsedTurn=false; rival.devUsedTurn=false;
   if(st.rig) TUT.rig=st.rig.map(a=>mk(a[0],a[1]));
-  TUT.glowNames=new Set(st.glow||[]);
+  TUT.glowNames=new Set();
   TUT.discardOnlyDross=!!st.discardOnly;
   TUT._mm=0;
   S.sel.clear(); S.busy=false; S.turn=0; render();
   try{ const tt=document.querySelector("#tutPanel .tt"); if(tt) tt.textContent="First Duel · "+(TUT.i+1)+"/"+TUT_STEPS.length; }catch(e){}
   if(st.intro){ S.busy=true; render(); await st.intro(); S.busy=false; render(); }
-  if(st.run){ S.busy=true; render(); await st.run(); S.busy=false; render(); }
+  if(st.run){ S.busy=true; render(); await st.run(); S.busy=false; }
+  TUT.glowNames=new Set(st.glow||[]); render();
   if(st.expect==null) tutPanelShow(st.text, st.finale?TUT_FINALE_BTN:TUT_CONT_BTN,
     st.finale? ()=>{ try{localStorage.setItem("devanteBattle","1");}catch(e){} location.reload(); } : ()=>tutNext());
   else { tutPanelShow(st.text); if(st.script) st.script(); }
@@ -2362,7 +2365,7 @@ function tutActionDone(){
 function tutAllows(type){
   if(!TUT) return true;
   const st=TUT_STEPS[TUT.i];
-  if(st.expect!==type){ toast(st.hint||"Follow the lesson instruction above your hand."); return false; }
+  if(st.expect!==type){ toast("Slow down, young apprentice — one magical lesson at a time."); return false; }
   return true;
 }
 

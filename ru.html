@@ -842,7 +842,7 @@ function render(){
       if(TUT&&TUT.glowNames&&TUT.glowNames.size&&!TUT.glowNames.has(c.name)&&!S.sel.has(c.id)){
         toast(`Не спеши, юный подмастерье — по одному волшебному уроку за раз.`); return;
       }
-      if(S.mustDraw){ toast(`Сначала возьмите карту — коснитесь светящейся колоды Добора.`); return; }
+      if(S.mustDraw){ toast(TUT?`Сначала возьми карту, юный подмастерье — посмотрим, что нам выпало.`:`Сначала возьмите карту — коснитесь светящейся колоды Добора.`); return; }
       S.sel.has(c.id)?S.sel.delete(c.id):S.sel.add(c.id); render();
     };
     h.appendChild(el);
@@ -2227,9 +2227,10 @@ const TUT_STEPS=[
     await showPlay(w.name, `о нет — у неё было <b>Зелье</b>, и она поставила <b>щит</b> с вашим Odorf! Придётся сперва пробиться.`, []);
   },
   text:`Теперь её хранит стоячий <b>щит</b> — атаки должны сперва прожечь его.`},
- {expect:"crystal", requireAbil:2, rig:[["ability","broomstick"],["ability","broomstick"],["object","Blank Parchment"]], glow:["Diamone","Хрустальный шар"],
+ {expect:"crystal", requireAbil:2, rig:[["character","Diamone"]], glow:["Diamone","Хрустальный шар"],
   run:async()=>{
     await humanTapDraw();
+    TUT.rig=[mk("ability","broomstick"),mk("ability","broomstick"),mk("object","Blank Parchment")];   // the scry replenish, staged after the draw
     try{
       const fx=$("playFx"); const title=fx.querySelector(".pfw"); const wrap=$("playFxCards");
       if(title) title.innerHTML="🎉 Поздравляем — вы нашли <b>Diamone</b>!";
@@ -2279,8 +2280,9 @@ const TUT_STEPS=[
   },
   text:`Её клад разбухает. Пора кончать.`},
  {expect:"spell", requireAbil:2, glow:["Fairy Queen","Getergrin","Заклинание"],
-  run:async()=>{ TUT.rigFan=["Aurum","Lignum","Rubrum","Metallum","Blank Parchment","Forgotten Goblet","Dusty Candelabra","Blank Parchment"]; },
-  text:`Ваш ход. <b>Бейте всем сразу.</b> Восемь краж — отразит ли она своей Деванте… или рискнёт?`,
+  rig:[["object","Blank Parchment"]],
+  run:async()=>{ await humanTapDraw(); TUT.rigFan=["Aurum","Lignum","Rubrum","Metallum","Blank Parchment","Forgotten Goblet","Dusty Candelabra","Blank Parchment"]; },
+  text:`Ваш ход — возьмите карту, затем <b>бейте всем сразу</b>. Восемь краж: отразит ли она своей Деванте… или рискнёт?`,
   hint:`Fairy Queen + Getergrin + оба Заклинания → атака → все 8 — Ведьме.`,
   done:`Ограблена — <b>ЧЕТЫРЕ книги ваши, Metallum наконец дома!</b> У неё остался лишь <b>Aurantiaco</b>… и она поворачивается к вам в ярости.`},
  {expect:"defend",
@@ -2346,13 +2348,14 @@ async function tutNext(){
     potions:Array.from({length:st.rivalShield},()=>({card:mk("ability","potion"),hits:1}))};
   me.devUsedTurn=false; rival.devUsedTurn=false;
   if(st.rig) TUT.rig=st.rig.map(a=>mk(a[0],a[1]));
-  TUT.glowNames=new Set(st.glow||[]);
+  TUT.glowNames=new Set();
   TUT.discardOnlyDross=!!st.discardOnly;
   TUT._mm=0;
   S.sel.clear(); S.busy=false; S.turn=0; render();
   try{ const tt=document.querySelector("#tutPanel .tt"); if(tt) tt.textContent="Первая дуэль · "+(TUT.i+1)+"/"+TUT_STEPS.length; }catch(e){}
   if(st.intro){ S.busy=true; render(); await st.intro(); S.busy=false; render(); }
-  if(st.run){ S.busy=true; render(); await st.run(); S.busy=false; render(); }
+  if(st.run){ S.busy=true; render(); await st.run(); S.busy=false; }
+  TUT.glowNames=new Set(st.glow||[]); render();
   if(st.expect==null) tutPanelShow(st.text, st.finale?TUT_FINALE_BTN:TUT_CONT_BTN,
     st.finale? ()=>{ try{localStorage.setItem("devanteBattle","1");}catch(e){} location.reload(); } : ()=>tutNext());
   else { tutPanelShow(st.text); if(st.script) st.script(); }
@@ -2365,7 +2368,7 @@ function tutActionDone(){
 function tutAllows(type){
   if(!TUT) return true;
   const st=TUT_STEPS[TUT.i];
-  if(st.expect!==type){ toast(st.hint||"Следуйте указанию урока над вашими картами."); return false; }
+  if(st.expect!==type){ toast("Не спеши, юный подмастерье — по одному волшебному уроку за раз."); return false; }
   return true;
 }
 
