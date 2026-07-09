@@ -1009,6 +1009,12 @@ function absorbWithShield(def,units,attackType){
 /* ---------------- SPELL ATTACK ---------------- */
 function spellFlow(ch,asst,spells){
   if(TUT){ const st=TUT_STEPS[TUT.i];
+    if(st&&st.requireAsst&&!asst){
+      (async()=>{ S.busy=true; render();
+        await showPlay("Идём ва-банк!", `возьмите и <b>Getergrin</b> — помощник удваивает весь ход!`, spells);
+        S.busy=false; render(); })();
+      return;
+    }
     if(st&&st.requireAbil&&spells.length<st.requireAbil){
       (async()=>{ S.busy=true; render();
         await showPlay("Идём ва-банк!", `Можно больше! Добавьте второе Заклинание — и заберите книги.`, spells);
@@ -2218,7 +2224,9 @@ const TUT_STEPS=[
       if(wrap) wrap.innerHTML="";
       fx.classList.add("on");
       for(const nm of ["Corium","Aurum","Lignum","Metallum","Rubrum","Caeruleum","Aurantiaco","Rosea"]){
-        const el=cardEl(mk("devante",nm)); el.classList.add("shimmer");
+        const cD=mk("devante",nm);
+        const el=cardEl(cD); el.classList.add("shimmer");
+        el.onclick=(ev)=>{ ev.stopPropagation(); inspectCard(cD); };
         wrap.appendChild(el); playSfx("deal"); await pause(320);
       }
       playSfx("found");
@@ -2326,6 +2334,7 @@ const TUT_STEPS=[
     const show=(t,st)=>{ if(who) who.innerHTML=t; if(sub) sub.innerHTML=st||""; };
     const put=(cards,small)=>{ wrap.innerHTML=""; cards.forEach(c=>{ const el=cardEl(c);
         if(small){ el.style.width="54px"; el.style.height="90px"; }
+        el.onclick=(ev)=>{ ev.stopPropagation(); inspectCard(c); };
         wrap.appendChild(el); }); return [...wrap.children]; };
     const oldWrapCss=wrap.style.cssText;
     try{
@@ -2334,7 +2343,7 @@ const TUT_STEPS=[
       // beat 1 — the whole cast
       const mains=CHARACTERS.filter(c=>!c.assistant).map(c=>mk("character",c.name));
       const assts=CHARACTERS.filter(c=>c.assistant).map(c=>mk("character",c.name));
-      show(`Знакомьтесь: труппа`,`каждый персонаж существует лишь в <b>ОДНОМ</b> экземпляре — все ведьмы, волшебники и помощники…`);
+      show(`Знакомьтесь: труппа`,`каждый персонаж существует лишь в <b>ОДНОМ</b> экземпляре — все ведьмы, волшебники и помощники… (коснитесь карты, чтобы рассмотреть)`);
       const els=put([...mains,...assts],true);
       playSfx("deal");
       await tap();
@@ -2353,11 +2362,15 @@ const TUT_STEPS=[
       wrap.innerHTML="";
       const row=(chN,abS)=>{ const r=document.createElement("div");
         r.style.cssText="display:flex;gap:12px;align-items:center;justify-content:center;width:100%;margin:4px 0";
-        r.appendChild(cardEl(mk("character",chN)));
+        const cc=mk("character",chN); const chEl=cardEl(cc);
+        chEl.onclick=(ev)=>{ ev.stopPropagation(); inspectCard(cc); };
+        r.appendChild(chEl);
         const a=document.createElement("div");
         a.style.cssText="font-size:30px;color:var(--brass-hi);text-shadow:0 0 12px rgba(232,207,142,.8)";
         a.textContent="\u279C"; r.appendChild(a);
-        const ab=cardEl(mk("ability",abS)); r.appendChild(ab);
+        const ca=mk("ability",abS); const ab=cardEl(ca);
+        ab.onclick=(ev)=>{ ev.stopPropagation(); inspectCard(ca); };
+        r.appendChild(ab);
         return r; };
       wrap.appendChild(row("Diamone","crystal"));
       wrap.appendChild(row("Odorf","potion"));
@@ -2405,7 +2418,7 @@ const TUT_STEPS=[
     await showPlay(w.name, `берёт карту… хмурится… и сбрасывает. Выжидает.`, [junk]);
   },
   text:`Она тянет время. Пора кончать.`},
- {expect:"spell", requireAbil:2, glow:["Fairy Queen","Getergrin","Заклинание"],
+ {expect:"spell", requireAbil:2, requireAsst:true, glow:["Fairy Queen","Getergrin","Заклинание"],
   rig:[["object","Blank Parchment"]],
   run:async()=>{ await humanTapDraw(); TUT.rigFan=["Blank Parchment","Forgotten Goblet","Aurum","Dusty Candelabra","Lignum","Blank Parchment","Rubrum","Metallum"]; },
   text:`Ваш ход — возьмите карту, затем <b>бейте всем сразу</b>. Восемь краж: отразит ли она своей Деванте… или рискнёт?`,
@@ -2425,7 +2438,7 @@ const TUT_STEPS=[
     await resolveSpellOnTargets(rival,{0:3},4,3);
     S.busy=false; tutActionDone();
   },
-  done:`Мощно — но вы <b>сожгли сокровище</b> ради этого. Помните: во всей игре лишь <b>ВОСЕМЬ</b> Деванте, и победит тот, у кого их больше в конце. (У вас три; у неё одна.)`},
+  done:`Мощно — но вы <b>сожгли сокровище</b> ради этого. Помните: во всей игре лишь <b>ВОСЕМЬ</b> Деванте, и победит тот, у кого их больше в конце. Подведём счёт…`},
  {expect:null,
   run:async()=>{
     const me=S.players[0], w=S.players[1];
@@ -2433,27 +2446,28 @@ const TUT_STEPS=[
     try{ $("collectPile").classList.add("tut-circle"); }catch(e){}
     await showPlay("Добор пуст!", `товар закончился — игра окончена… посмотрим, кто победил`, []);
     try{ $("collectPile").classList.remove("tut-circle"); }catch(e){}
-    /* the scoreboard: hands turn over, the Devante fly home to the count */
     const ov=document.createElement("div");
-    ov.style.cssText="position:fixed;inset:0;z-index:240;background:rgba(8,7,3,.94);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:14px;padding:34px 14px 20px;overflow-y:auto";
+    ov.style.cssText="position:fixed;inset:0;z-index:240;background:rgba(8,7,3,.95);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:12px;padding:30px 12px 22px;overflow-y:auto";
     ov.innerHTML=`<div style="font-family:Cinzel,serif;font-size:20px;color:var(--brass-hi);letter-spacing:.14em">СЧЁТ</div>`;
     const mkSide=(nm)=>{ const sd=document.createElement("div");
-      sd.style.cssText="display:flex;flex-direction:column;align-items:center;gap:6px;min-width:120px";
-      sd.innerHTML=`<div style="font-family:Cinzel,serif;font-size:13px;color:var(--parch);letter-spacing:.1em">${nm}</div>
-        <div class="scNum" style="font-family:Cinzel,serif;font-size:42px;font-weight:900;color:var(--brass-hi)">0</div>
-        <div class="scRow" style="display:flex;gap:4px;min-height:66px"></div>`;
+      sd.style.cssText="width:min(560px,94vw);display:flex;flex-direction:column;gap:8px;padding:10px 12px;border:1px solid var(--bronze);border-radius:12px;background:rgba(22,19,10,.65)";
+      sd.innerHTML=`<div style="display:flex;align-items:center;gap:10px">
+          <div style="font-family:Cinzel,serif;font-size:14px;color:var(--parch);letter-spacing:.12em;flex:1">${nm}</div>
+          <div class="scRow" style="display:flex;gap:4px;min-height:64px;align-items:center"></div>
+          <div class="scNum" style="font-family:Cinzel,serif;font-size:38px;font-weight:900;color:var(--brass-hi);min-width:40px;text-align:right">0</div>
+        </div>
+        <div class="scHand" style="display:flex;gap:5px;flex-wrap:wrap;justify-content:center;min-height:78px"></div>`;
       return sd; };
-    const rowWrap=document.createElement("div"); rowWrap.style.cssText="display:flex;gap:30px;align-items:flex-start";
     const sideMe=mkSide("ВЫ"), sideW=mkSide(w.name);
-    rowWrap.append(sideMe,sideW); ov.appendChild(rowWrap);
-    const handRow=document.createElement("div"); handRow.style.cssText="display:flex;gap:6px;flex-wrap:wrap;justify-content:center;max-width:92vw;min-height:90px";
-    ov.appendChild(handRow);
-    const hint=document.createElement("div"); hint.style.cssText="font-size:11px;letter-spacing:.22em;color:var(--bronze);text-transform:uppercase;min-height:16px";
+    ov.append(sideMe,sideW);
+    const hint=document.createElement("div");
+    hint.style.cssText="font-size:11px;letter-spacing:.22em;color:var(--bronze);text-transform:uppercase;min-height:16px";
     ov.appendChild(hint);
     document.body.appendChild(ov);
     const revealSide=async(p,side,label)=>{
-      hint.textContent=label; handRow.innerHTML="";
-      const cards=p.hand.slice(0,12);
+      hint.textContent=label;
+      const handRow=side.querySelector(".scHand");
+      const cards=p.hand.slice(0,14);
       for(const c of cards){ const el=cardEl(c); el.style.width="44px"; el.style.height="74px";
         if(c.kind==="devante") el.classList.add("shimmer");
         handRow.appendChild(el); playSfx("deal"); await pause(240); }
@@ -2468,15 +2482,14 @@ const TUT_STEPS=[
         document.body.appendChild(fly);
         requestAnimationFrame(()=>{ fly.style.left=(tr.left+k*42)+"px"; fly.style.top=(tr.top)+"px";
           fly.style.width="38px"; fly.style.height="64px"; });
-        srcEl.style.opacity="0.22";
+        srcEl.style.opacity="0.25";
         playSfx("found");
         await pause(820);
         fly.remove();
         const mini=cardEl(c); mini.style.width="38px"; mini.style.height="64px"; slot.appendChild(mini);
         num.textContent=String(k+1);
       }
-      [...handRow.children].forEach(el=>el.style.opacity="0.22");
-      await pause(800);
+      await pause(600);
     };
     await revealSide(me,sideMe,"ваша рука открывается…");
     await revealSide(w,sideW,"рука Ведьмы открывается…");
