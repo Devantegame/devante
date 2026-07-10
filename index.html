@@ -706,13 +706,6 @@ function startGame(nAI){
   for(let i=0;i<nAI;i++) S.players.push({name:AI_NAMES[i], human:false, hand:[], shield:null, devUsedTurn:false, knowledge:{}});
   // deal
   for(let r=0;r<HAND_SIZE;r++) S.players.forEach(p=>p.hand.push(S.collect.pop()));
-  // flip 3 to discard — Devante flipped at setup burn instead
-  let flipped=0;
-  while(flipped<3 && S.collect.length){
-    const c=S.collect.pop();
-    if(c.kind==="devante"){ S.collect.splice(Math.floor(Math.random()*S.collect.length),0,c); }
-    else {S.discard.push(c); flipped++;}
-  }
   $("startScreen").style.display="none";
   $("game").classList.add("on");
   initBacks(); ensureAC(); preloadSounds(); startMusic();
