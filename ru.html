@@ -1026,11 +1026,11 @@ function spellFlow(ch,asst,spells){
   const targets=S.players.map((p,i)=>({p,i})).filter(x=>x.i!==0);
   allocModal({
     title:`Заклинания (${spells.length}) с ${ch.name}${asst?" и "+asst.name:""}`,
-    desc:`Сила атаки: ${units} (множители уже учтены). Разделите между соперниками — каждая единица крадёт одну карту.`,
-    targets, max:units,
+    desc:`Разделите все ${units} ${ruP(units,"кражу","кражи","краж")} между соперниками (множители уже учтены). Каждая единица крадёт одну карту — распределить нужно все.`,
+    targets, max:units, requireAll:true,
     onConfirm:(alloc)=>{
       const total=Object.values(alloc).reduce((a,b)=>a+b,0);
-      if(total===0){toast("Распределите хотя бы одну единицу.");return false;}
+      if(total<units){toast(`Разделите все ${units} ${ruP(units,"кражу","кражи","краж")} между соперниками.`);return false;}
       if(TUT){const st=TUT_STEPS[TUT.i]; if(st&&st.requireAbil&&total<units){toast("Отправьте все единицы Ведьме — ва-банк!");return false;}}
       const played=[ch,...(asst?[asst]:[]),...spells];
       fxHandToDiscard(played);
@@ -1092,11 +1092,11 @@ function crystalFlow(ch,asst,balls){
   const targets=S.players.map((p,i)=>({p,i})).filter(x=>x.i!==0);
   allocModal({
     title:`Взор шара: ${ch.name}${asst?" и "+asst.name:""}`,
-    desc:`Сила взора: ${units}. Распределите между соперниками — их зелья гасят силу первыми; чтобы увидеть карты, нужна хотя бы одна лишняя единица.`,
-    targets, max:units,
+    desc:`Сила взора: ${units}. Распределите все единицы между соперниками — их зелья гасят силу первыми; чтобы увидеть карты, нужна хотя бы одна лишняя единица.`,
+    targets, max:units, requireAll:true,
     onConfirm:(alloc)=>{
       const total=Object.values(alloc).reduce((a,b)=>a+b,0);
-      if(total===0){toast("Распределите хотя бы одну единицу.");return false;}
+      if(total<units){toast(`Распределите все ${units} единиц${units===1?"у":""} перед подтверждением.`);return false;}
       if(TUT){const st=TUT_STEPS[TUT.i]; if(st&&st.requireAbil&&total<units){toast("Отправьте все единицы Ведьме — ва-банк!");return false;}}
       const played=[ch,...(asst?[asst]:[]),...balls];
       fxHandToDiscard(played);
@@ -1316,11 +1316,20 @@ async function aiDefend(def,att,units,attackType,abilityCount){
     return 0;
   }
   if(chars.length&&brooms.length){
-    const v=Math.min(units,brooms.length);
-    // use an assistant when it actually adds cancelled units
-    const asst=(assts[0] && v*multiplier(chars[0],assts[0]) > v*multiplier(chars[0],null) && v*multiplier(chars[0],null)<units)?assts[0]:null;
-    const cancel=Math.min(v*multiplier(chars[0],asst),units);
-    const spent=[chars[0],...(asst?[asst]:[]),...brooms.slice(0,v)];
+    // assess every character/assistant combination: maximise units deflected,
+    // then spend the fewest cards — multiplier first, minimum broomsticks after
+    let best=null;
+    for(const ch of chars){
+      for(const asst of [null,...(assts.length?[assts[0]]:[])]){
+        const m=multiplier(ch,asst);
+        const v=Math.min(Math.ceil(units/m), brooms.length);
+        const cancel=Math.min(v*m, units);
+        const spentN=v+1+(asst?1:0);
+        if(!best || cancel>best.cancel || (cancel===best.cancel && (spentN<best.spentN || (spentN===best.spentN && v<best.v)))) best={ch,asst,v,cancel,spentN};
+      }
+    }
+    const {ch,asst,v,cancel}=best;
+    const spent=[ch,...(asst?[asst]:[]),...brooms.slice(0,v)];
     removeFromHand(def,spent); toDiscard(spent);
     def._pendingRefund=(def._pendingRefund||0)+spent.length;
     playSfx("broom");
@@ -1369,24 +1378,13 @@ function devanteMenu(card){
   if(!tutAllows("devante")) return;
   const box=$("modalBox");
   box.innerHTML=`<h2>${card.name} — ранг ${card.rank}</h2>
-    <p>Деванте несёт огромную силу и не требует персонажа. Сыгранная карта открывается и уходит в Костёр — вы теряете её из коллекции.</p>
+    <p>Деванте несёт огромную силу и не требует персонажа. Сыгранная карта открывается и уходит в Костёр — вы теряете её из коллекции. (Деванте также может отразить атаку как метла — вам предложат это, когда соперник нападёт.)</p>
     <div class="devchoice"></div>`;
   const grid=box.querySelector(".devchoice");
   const opt=(label,fn)=>{const b=document.createElement("button");b.className="abtn";b.textContent=label;b.onclick=fn;grid.appendChild(b);};
   opt("Как заклинание — украсть 8 карт у кого угодно",()=>{ $("modal").classList.remove("on"); devanteSpell(card); });
   opt("Как шар — увидеть карты всех",()=>{ $("modal").classList.remove("on"); devanteCrystal(card); });
   opt("Крушитель щитов — разбить все щиты соперника",()=>{ $("modal").classList.remove("on"); devanteShatter(card); });
-  opt("Как метла — взять 2 карты",()=>{
-    const me=S.players[0];
-    if(me.devUsedTurn){toast("Только одна Деванте за ход.");return;}
-    removeFromHand(me,[card]); toBurn([card]); me.devUsedTurn=true; S.sel.clear();
-    const drew=drawCards(me,2);
-    const drewCards=drew? me.hand.slice(-drew):[];
-    fxDrawFly(me,drew);
-    log(`📕 Вы жертвуете <b>${card.name}</b> как метлу и берёте ${drew} ${ruP(drew,"карту","карты","карт")}.`);
-    $("modal").classList.remove("on");
-    showDevanteDrama("You", card, `жертвуете <b>${card.name}</b> как метлу — +${drew} ${ruP(drew,"карта","карты","карт")}`).then(()=>celebrateFinds(me,drewCards)).then(()=>endTurn());
-  });
   opt("Как зелье — щит (4 удара)",()=>{
     const me=S.players[0];
     if(me.shield){toast("У вас уже стоит щит.");return;}
@@ -1408,11 +1406,11 @@ function devanteSpell(card){
   const targets=S.players.map((p,i)=>({p,i})).filter(x=>x.i!==0);
   allocModal({
     title:`${card.name} как заклинание — 8 краж`,
-    desc:`Разделите до 8 краж между соперниками как угодно. Мётлы бессильны против Деванте — остановит её только Деванте старшего ранга.`,
-    targets, max:8,
+    desc:`Разделите все 8 краж между соперниками. Мётлы бессильны против Деванте — остановит её только Деванте старшего ранга.`,
+    targets, max:8, requireAll:true,
     onConfirm:(alloc)=>{
       const total=Object.values(alloc).reduce((a,b)=>a+b,0);
-      if(total===0){toast("Назначьте хотя бы одну кражу.");return false;}
+      if(total<8){toast("Разделите все 8 краж между соперниками.");return false;}
       removeFromHand(me,[card]); toBurn([card]); me.devUsedTurn=true; S.sel.clear(); S.busy=true; render();
       (async()=>{
         await showDevanteDrama("Вы", card, `обрушиваете <b>${card.name}</b> как заклинание!`);
@@ -1468,7 +1466,14 @@ function devanteCrystal(card){
   log(`📕🔮 Вы обращаете <b>${card.name}</b> в хрустальный шар — все карты как на ладони.`);
   (async()=>{
     await showDevanteDrama("Вы", card, `обращаете <b>${card.name}</b> в шар — он видит всё!`);
-    await showRevealedHands(S.players.filter((p,i)=>i!==0));
+    const reveals=[];
+    for(const def of S.players.filter((p,i)=>i!==0)){
+      const blocked=await tryDevanteBlock(def,card);
+      if(blocked){ log(`🛡 Карты <b>${def.name}</b> остались скрыты.`); continue; }
+      reveals.push(def);
+    }
+    if(reveals.length) await showRevealedHands(reveals);
+    else log(`Все руки остались скрыты — взор отражён.`);
     S.busy=false; endTurn();
   })();
 }
@@ -1503,10 +1508,11 @@ function tryDevanteBlock(def,attackCard){
 }
 
 /* ---------------- modals ---------------- */
-function allocModal({title,desc,targets,max,onConfirm}){
+function allocModal({title,desc,targets,max,onConfirm,requireAll}){
   const box=$("modalBox");
   box.innerHTML=`<h2>${title}</h2><p>${desc}</p><p style="font-size:14px">Осталось распределить: <b id="unitsLeft">${max}</b></p>`;
   const alloc={};
+  let refreshGo=()=>{};
   targets.forEach(({p,i})=>{
     alloc[i]=0;
     const row=document.createElement("div");row.className="alloc-row";
@@ -1516,11 +1522,16 @@ function allocModal({title,desc,targets,max,onConfirm}){
     const num=document.createElement("span");num.textContent="0";
     const plus=document.createElement("button");plus.textContent="+";
     const used=()=>Object.values(alloc).reduce((a,b)=>a+b,0);
-    minus.onclick=()=>{if(alloc[i]>0){alloc[i]--;num.textContent=alloc[i];$("unitsLeft").textContent=max-used();}};
-    plus.onclick=()=>{if(used()<max){alloc[i]++;num.textContent=alloc[i];$("unitsLeft").textContent=max-used();}};
+    minus.onclick=()=>{if(alloc[i]>0){alloc[i]--;num.textContent=alloc[i];$("unitsLeft").textContent=max-used();refreshGo();}};
+    plus.onclick=()=>{if(used()<max){alloc[i]++;num.textContent=alloc[i];$("unitsLeft").textContent=max-used();refreshGo();}};
     stp.append(minus,num,plus);row.appendChild(stp);box.appendChild(row);
   });
   const go=document.createElement("button");go.className="abtn primary";go.style.cssText="width:100%;margin-top:6px";go.textContent="Подтвердить";
+  if(requireAll){
+    refreshGo=()=>{ const left=max-Object.values(alloc).reduce((a,b)=>a+b,0);
+      go.disabled=left>0; go.textContent=left>0?`Распределите все ${max} — осталось ${left}`:"Подтвердить"; };
+    refreshGo();
+  }
   go.onclick=()=>{ if(onConfirm(alloc)!==false) $("modal").classList.remove("on"); };
   const cancel=document.createElement("button");cancel.className="abtn danger";cancel.style.cssText="width:100%;margin-top:8px";cancel.textContent="Отмена";
   cancel.onclick=()=>$("modal").classList.remove("on");
@@ -2117,6 +2128,78 @@ function endTurn(){
 }
 
 /* ---------------- AI ---------------- */
+/* Rare, cautious offensive Devante use by the AI — shows off the big plays */
+async function aiDevantePlay(p,card){
+  const idx=S.players.indexOf(p);
+  const rivals=S.players.map((pl,i)=>({pl,i})).filter(x=>x.i!==idx);
+  // a) unguarded? sometimes lay it down as a 4-hit shield
+  if(!p.shield && Math.random()<0.35){
+    removeFromHand(p,[card]); p.devUsedTurn=true;
+    p.shield={devante:true,card,hitsLeft:4};
+    log(`⛨ <b>${p.name}</b> кладёт <b>${card.name}</b> перед собой как щит — он выдержит четыре удара, затем сгорит.`);
+    await showDevanteDrama(p.name, card, `ставит <b>${card.name}</b> перед собой как могучий щит`);
+    render(); return;
+  }
+  // b) a well-shielded rival? sometimes shatter everything
+  const shielded=rivals.filter(x=>x.pl.shield);
+  if(shielded.length && Math.random()<0.35){
+    const def=shielded.sort((a,b)=>{
+      const hits=sh=>sh.devante?sh.hitsLeft:sh.potions.reduce((n,x)=>n+x.hits,0);
+      return hits(b.pl.shield)-hits(a.pl.shield);
+    })[0].pl;
+    removeFromHand(p,[card]); toBurn([card]); p.devUsedTurn=true; render();
+    await showDevanteDrama(p.name, card, `обрушивает <b>${card.name}</b> на защиту <b>${def.name}</b>!`);
+    const blocked=await tryDevanteBlock(def,card);
+    if(!blocked){
+      if(def.shield.devante){ toBurn([def.shield.card]); def.shield=null;
+        log(`💥 Щит-Деванте <b>${def.name}</b> уничтожен!`); }
+      else { const spent=[...def.shield.potions.map(x=>x.card), def.shield.charCard]; if(def.shield.asst) spent.push(def.shield.asst);
+        toDiscard(spent); def.shield=null;
+        log(`💥 Все зелья <b>${def.name}</b> разбиты вдребезги!`); }
+      fxBolt(boxOf(p),boxOf(def),"#e8a04a");
+    }
+    render(); return;
+  }
+  // c) otherwise: Spell (8 steals) or Crystal (see every hand)
+  removeFromHand(p,[card]); toBurn([card]); p.devUsedTurn=true; render();
+  if(Math.random()<0.5){
+    await showDevanteDrama(p.name, card, `обрушивает <b>${card.name}</b> как заклинание — 8 краж!`);
+    // divide all 8 steals: richest hands first
+    const order=rivals.slice().sort((a,b)=>b.pl.hand.length-a.pl.hand.length);
+    const alloc={}; let left=8;
+    for(const x of order){ const take=Math.min(left, x.pl.hand.length); if(take>0){alloc[x.i]=take; left-=take;} }
+    if(left>0 && order.length) alloc[order[0].i]=(alloc[order[0].i]||0)+left;
+    for(const [iStr,units] of Object.entries(alloc)){
+      if(units<=0) continue;
+      const def=S.players[+iStr];
+      log(`📕⚔️ <b>${card.name}</b> бьёт по <b>${def.name}</b>!`);
+      for(let k=0;k<Math.min(units,4);k++) setTimeout(()=>fxBolt(boxOf(p),boxOf(def),"#e8a04a"), k*140);
+      await pause(T("beat"));
+      const blocked=await tryDevanteBlock(def,card);
+      if(blocked) continue;
+      let rem=absorbWithShield(def,units,"spell");
+      if(rem>0){
+        const stolen=await pickStealCards(p,def,rem);
+        p.hand.push(...stolen);
+        fxSteal(p,def,stolen.length);
+        const names = def.human? stolen.map(c=>`<b>${c.name}</b>`).join(", ")||"ничего" : `${stolen.length} ${ruP(stolen.length,"карту","карты","карт")}`;
+        log(`💰 <b>${p.name}</b> крадёт ${names} у <b>${def.name}</b>.`);
+        render();
+      }
+    }
+  } else {
+    await showDevanteDrama(p.name, card, `обращает <b>${card.name}</b> в шар — он видит всё!`);
+    for(const x of rivals){
+      const def=x.pl;
+      const blocked=await tryDevanteBlock(def,card);
+      if(blocked) continue;
+      p.knowledge[x.i]=def.hand.filter(c=>c.kind==="devante").length;
+      log(`🔮 <b>${p.name}</b> заглядывает в карты <b>${def.name}</b>.`);
+      if(def.human) await showBeingScried(p,def);
+    }
+  }
+  render();
+}
 async function aiTurn(p){
   const idx=S.players.indexOf(p);
   const hand=p.hand;
@@ -2148,6 +2231,14 @@ async function aiTurn(p){
     log(`🐉 <b>${p.name}</b> выпускает <b>Дракона</b> и берёт ${drew} ${ruP(drew,"карту","карты","карт")}!`);
     await showPlay(p.name, `выпускает Дракона — берёт ${drew} ${ruP(drew,"карту","карты","карт")}`, [dragon]);
     render(); return;
+  }
+  // 0.5 — very occasionally unleash a Devante offensively (cautious: only with a spare in hand,
+  //       since collecting them is the goal; burns the lowest-ranked copy)
+  const devsAI=hand.filter(c=>c.kind==="devante");
+  if(!TUT && devsAI.length>=2 && !p.devUsedTurn && Math.random()<0.08){
+    const d=devsAI.slice().sort((a,b)=>b.rank-a.rank)[0];
+    await aiDevantePlay(p,d);
+    return;
   }
   // 1. shield up if valuable
   if(potionChar&&potions.length>=2&&!p.shield&&Math.random()<.7){
