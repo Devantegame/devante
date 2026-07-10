@@ -1284,10 +1284,11 @@ function humanDefend(def,att,units,attackType,abilityCount){
         $("modal").classList.remove("on"); render();
         await fxDevRepel(d, units, attackType);
         const drew=drawCards(def,2);
+        const drewCards=drew? def.hand.slice(-drew):[];
         fxDrawFly(def,drew);
         log(`📕 Вы жертвуете <b>${d.name}</b> как метлу — атака отражена, взято карт: ${drew}.`);
         $("modal").classList.remove("on"); render();
-        showDevanteDrama("Вы", d, `жертвуете <b>${d.name}</b> — атака отражена! (+${drew} ${ruP(drew,"карта","карты","карт")})`).then(()=>celebrateFinds(def,drew)).then(()=>res(0));
+        showDevanteDrama("Вы", d, `жертвуете <b>${d.name}</b> — атака отражена! (+${drew} ${ruP(drew,"карта","карты","карт")})`).then(()=>celebrateFinds(def,drewCards)).then(()=>res(0));
       };
       box.appendChild(b);
     }
@@ -1380,10 +1381,11 @@ function devanteMenu(card){
     if(me.devUsedTurn){toast("Только одна Деванте за ход.");return;}
     removeFromHand(me,[card]); toBurn([card]); me.devUsedTurn=true; S.sel.clear();
     const drew=drawCards(me,2);
+    const drewCards=drew? me.hand.slice(-drew):[];
     fxDrawFly(me,drew);
     log(`📕 Вы жертвуете <b>${card.name}</b> как метлу и берёте ${drew} ${ruP(drew,"карту","карты","карт")}.`);
     $("modal").classList.remove("on");
-    showDevanteDrama("You", card, `жертвуете <b>${card.name}</b> как метлу — +${drew} ${ruP(drew,"карта","карты","карт")}`).then(()=>celebrateFinds(me,drew)).then(()=>endTurn());
+    showDevanteDrama("You", card, `жертвуете <b>${card.name}</b> как метлу — +${drew} ${ruP(drew,"карта","карты","карт")}`).then(()=>celebrateFinds(me,drewCards)).then(()=>endTurn());
   });
   opt("Как зелье — щит (4 удара)",()=>{
     const me=S.players[0];
@@ -1573,6 +1575,7 @@ function showFullLog(){
 
 /* Any time the human gains cards, check for Devantes and celebrate them */
 async function celebrateFinds(p,drawnCards){
+  if(typeof drawnCards==="number") drawnCards=(p&&p.hand&&drawnCards>0)? p.hand.slice(-drawnCards):[];
   if(!p||!p.human||!drawnCards||!drawnCards.length) return;
   const found=drawnCards.filter(c=>c.kind==="devante");
   if(!found.length) return;
@@ -1777,7 +1780,8 @@ async function settleReplenish(def){
   fxRefund(def,dr);
   await fxReplenishParade(def, def.hand.slice(-dr));
   log(`<b>${def.name}</b> восполняет из Добора: ${dr} — по одной за каждую карту защиты.`);
-  if(def.human){ toast(`Восполнено +${dr} — по одной за каждую карту защиты`); render(); await celebrateFinds(def,dr); }
+  const drCards=dr? def.hand.slice(-dr):[];
+  if(def.human){ toast(`Восполнено +${dr} — по одной за каждую карту защиты`); render(); await celebrateFinds(def,drCards); }
   render(); await pause(Math.round(T("beat")*0.7));
 }
 function fxSteal(att,def,n){
@@ -2213,7 +2217,7 @@ function mk(kind,name){
 const TUT_CONT_BTN="Продолжить", TUT_FINALE_BTN="В бой!";
 const TUT_STEPS=[
  {expect:null,
-  hand:[["ability","crystal"],["devante","Metallum"],["character","Odorf"],["object","Dusty Candelabra"],["object","Forgotten Goblet"]],
+  hand:[["ability","crystal"],["devante","Metallum"],["character","Odorf"],["object","Dusty Candelabra"],["object","Forgotten Goblet"],["object","Blank Parchment"]],
   rivalHand:[["devante","Aurum"],["devante","Lignum"],["devante","Rubrum"],["devante","Aurantiaco"],["object","Blank Parchment"],["object","Forgotten Goblet"],["object","Dusty Candelabra"],["object","Blank Parchment"],["object","Forgotten Goblet"]],
   glow:["Metallum"],
   intro:async()=>{
@@ -2251,16 +2255,16 @@ const TUT_STEPS=[
   run:async()=>{
     const me=S.players[0], w=S.players[1];
     await showPlay(w.name, `её ход — что она задумала?`, []);
-    await showPlay(w.name, `ДВА Заклинания с Sallandra — она тянется к вашей руке!`, [mk("character","Sallandra"),mk("ability","spell"),mk("ability","spell")]);
+    await showPlay(w.name, `ТРИ Заклинания с Sallandra — она тянется в самую глубь вашей руки!`, [mk("character","Sallandra"),mk("ability","spell"),mk("ability","spell"),mk("ability","spell")]);
     playSfx("spell");
-    for(let k=0;k<2;k++) setTimeout(()=>fxBolt(boxOf(w),boxOf(me),"#e8a04a"),k*180);
+    for(let k=0;k<3;k++) setTimeout(()=>fxBolt(boxOf(w),boxOf(me),"#e8a04a"),k*170);
     await pause(760);
-    TUT.forceSteal=["Metallum","Odorf"];
-    const stolen=await fanPickWatch(w,me,2);
+    TUT.forceSteal=["Forgotten Goblet","Odorf","Metallum"];
+    const stolen=await fanPickWatch(w,me,3);
     w.hand.push(...stolen); TUT.forceSteal=null; render();
   },
-  text:`Книга И Odorf — вы видели, как они покинули вашу руку. Запомните этот укол. Мы всё вернём.`},
- {expect:"discard", discardOnly:true, glow:["Forgotten Goblet"], rig:[["ability","crystal"]],
+  text:`Сначала хлам… затем Odorf… затем ваша <b>КНИГА</b>. Чувствуете, как нарастает? Запомните этот укол. Мы всё вернём.`},
+ {expect:"discard", discardOnly:true, glow:["Blank Parchment"], rig:[["ability","crystal"]],
   run:async()=>{ await humanTapDraw(); },
   text:`Ваш ход: вы взяли <b>второй Хрустальный шар</b>! Но его хозяйки нет. <b>Сбросьте последний хлам.</b>`,
   hint:`Коснитесь светящегося предмета, затем «Сбросить».`,

@@ -1281,10 +1281,11 @@ function humanDefend(def,att,units,attackType,abilityCount){
         $("modal").classList.remove("on"); render();
         await fxDevRepel(d, units, attackType);
         const drew=drawCards(def,2);
+        const drewCards=drew? def.hand.slice(-drew):[];
         fxDrawFly(def,drew);
         log(`📕 You burn <b>${d.name}</b> as a broomstick — attack repelled, drew ${drew}.`);
         $("modal").classList.remove("on"); render();
-        showDevanteDrama("You", d, `burn <b>${d.name}</b> — the attack is repelled! (drew ${drew})`).then(()=>celebrateFinds(def,drew)).then(()=>res(0));
+        showDevanteDrama("You", d, `burn <b>${d.name}</b> — the attack is repelled! (drew ${drew})`).then(()=>celebrateFinds(def,drewCards)).then(()=>res(0));
       };
       box.appendChild(b);
     }
@@ -1377,10 +1378,11 @@ function devanteMenu(card){
     if(me.devUsedTurn){toast("Only one Devante per turn.");return;}
     removeFromHand(me,[card]); toBurn([card]); me.devUsedTurn=true; S.sel.clear();
     const drew=drawCards(me,2);
+    const drewCards=drew? me.hand.slice(-drew):[];
     fxDrawFly(me,drew);
     log(`📕 You burn <b>${card.name}</b> as a broomstick and draw ${drew}.`);
     $("modal").classList.remove("on");
-    showDevanteDrama("You", card, `sacrifice <b>${card.name}</b> as a Broomstick — draw ${drew}`).then(()=>celebrateFinds(me,drew)).then(()=>endTurn());
+    showDevanteDrama("You", card, `sacrifice <b>${card.name}</b> as a Broomstick — draw ${drew}`).then(()=>celebrateFinds(me,drewCards)).then(()=>endTurn());
   });
   opt("As Potion — shield (4 hits)",()=>{
     const me=S.players[0];
@@ -1570,6 +1572,7 @@ function showFullLog(){
 
 /* Any time the human gains cards, check for Devantes and celebrate them */
 async function celebrateFinds(p,drawnCards){
+  if(typeof drawnCards==="number") drawnCards=(p&&p.hand&&drawnCards>0)? p.hand.slice(-drawnCards):[];
   if(!p||!p.human||!drawnCards||!drawnCards.length) return;
   const found=drawnCards.filter(c=>c.kind==="devante");
   if(!found.length) return;
@@ -1774,7 +1777,8 @@ async function settleReplenish(def){
   fxRefund(def,dr);
   await fxReplenishParade(def, def.hand.slice(-dr));
   log(`<b>${def.name}</b> replenishes ${dr} from the Collect pile — one per defence card.`);
-  if(def.human){ toast(`Replenished +${dr} — one per defence card played`); render(); await celebrateFinds(def,dr); }
+  const drCards=dr? def.hand.slice(-dr):[];
+  if(def.human){ toast(`Replenished +${dr} — one per defence card played`); render(); await celebrateFinds(def,drCards); }
   render(); await pause(Math.round(T("beat")*0.7));
 }
 function fxSteal(att,def,n){
@@ -2210,7 +2214,7 @@ function mk(kind,name){
 const TUT_CONT_BTN="Continue", TUT_FINALE_BTN="To battle!";
 const TUT_STEPS=[
  {expect:null,
-  hand:[["ability","crystal"],["devante","Metallum"],["character","Odorf"],["object","Dusty Candelabra"],["object","Forgotten Goblet"]],
+  hand:[["ability","crystal"],["devante","Metallum"],["character","Odorf"],["object","Dusty Candelabra"],["object","Forgotten Goblet"],["object","Blank Parchment"]],
   rivalHand:[["devante","Aurum"],["devante","Lignum"],["devante","Rubrum"],["devante","Aurantiaco"],["object","Blank Parchment"],["object","Forgotten Goblet"],["object","Dusty Candelabra"],["object","Blank Parchment"],["object","Forgotten Goblet"]],
   glow:["Metallum"],
   intro:async()=>{
@@ -2248,16 +2252,16 @@ const TUT_STEPS=[
   run:async()=>{
     const me=S.players[0], w=S.players[1];
     await showPlay(w.name, `her turn — what will she do?`, []);
-    await showPlay(w.name, `TWO Spells with Sallandra — she reaches for your hand!`, [mk("character","Sallandra"),mk("ability","spell"),mk("ability","spell")]);
+    await showPlay(w.name, `THREE Spells with Sallandra — she reaches deep into your hand!`, [mk("character","Sallandra"),mk("ability","spell"),mk("ability","spell"),mk("ability","spell")]);
     playSfx("spell");
-    for(let k=0;k<2;k++) setTimeout(()=>fxBolt(boxOf(w),boxOf(me),"#e8a04a"),k*180);
+    for(let k=0;k<3;k++) setTimeout(()=>fxBolt(boxOf(w),boxOf(me),"#e8a04a"),k*170);
     await pause(760);
-    TUT.forceSteal=["Metallum","Odorf"];
-    const stolen=await fanPickWatch(w,me,2);
+    TUT.forceSteal=["Forgotten Goblet","Odorf","Metallum"];
+    const stolen=await fanPickWatch(w,me,3);
     w.hand.push(...stolen); TUT.forceSteal=null; render();
   },
-  text:`Your spellbook AND Odorf — watched them leave your very hand. Remember that sting. We are getting them back.`},
- {expect:"discard", discardOnly:true, glow:["Forgotten Goblet"], rig:[["ability","crystal"]],
+  text:`Dross first… then Odorf… then your <b>SPELLBOOK</b>. Feel how it builds? Remember that sting. We are getting them back.`},
+ {expect:"discard", discardOnly:true, glow:["Blank Parchment"], rig:[["ability","crystal"]],
   run:async()=>{ await humanTapDraw(); },
   text:`Your turn: you collected a <b>second Crystal Ball</b>! But its mistress is missing. <b>Discard the last dross.</b>`,
   hint:`Tap the glowing Object, then Discard.`,
