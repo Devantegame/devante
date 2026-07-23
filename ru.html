@@ -952,7 +952,7 @@ function drawCards(p,n){
   return drew;
 }
 function multiplier(ch,asst){ const adv=ch.advanced; return asst?(adv?4:2):(adv?2:1); }
-function removeFromHand(p,cards){ const ids=new Set(cards.map(c=>c.id)); p.hand=p.hand.filter(c=>!ids.has(c.id)); }
+function removeFromHand(p,cards){ for(const c of cards){ const ix=p.hand.findIndex(h=>h.id===c.id); if(ix>=0) p.hand.splice(ix,1); } }
 function toDiscard(cards){ S.discard.push(...cards); }
 function toBurn(cards){ S.burn.push(...cards); if(cards.some(c=>c.kind==="devante")){ fxBurnFlash(); } }
 
@@ -1525,7 +1525,8 @@ function allocModal({title,desc,targets,max,onConfirm,requireAll}){
       go.disabled=left>0; go.textContent=left>0?`Распределите все ${max} — осталось ${left}`:"Подтвердить"; };
     refreshGo();
   }
-  go.onclick=()=>{ if(onConfirm(alloc)!==false) $("modal").classList.remove("on"); };
+  let fired=false;
+  go.onclick=()=>{ if(fired) return; if(onConfirm(alloc)!==false){ fired=true; $("modal").classList.remove("on"); } };
   const cancel=document.createElement("button");cancel.className="abtn danger";cancel.style.cssText="width:100%;margin-top:8px";cancel.textContent="Отмена";
   cancel.onclick=()=>$("modal").classList.remove("on");
   box.append(go,cancel);
@@ -1782,7 +1783,7 @@ async function settleReplenish(def){
   const nR=def._pendingRefund; def._pendingRefund=0;
   const dr=drawCards(def,nR);
   fxRefund(def,dr);
-  await fxReplenishParade(def, def.hand.slice(-dr));
+  await fxReplenishParade(def, dr? def.hand.slice(-dr):[]);
   log(`<b>${def.name}</b> восполняет из Добора: ${dr} — по одной за каждую карту защиты.`);
   const drCards=dr? def.hand.slice(-dr):[];
   if(def.human){ toast(`Восполнено +${dr} — по одной за каждую карту защиты`); render(); await celebrateFinds(def,drCards); }
@@ -1955,7 +1956,15 @@ function fanPickInteractive(def,n){
           const alt=mapping.find(c=>c.name===TUT.rigFan[0]&&def.hand.some(h=>h.id===c.id));
           if(alt){ card=alt; TUT.rigFan.shift(); }
         }
-        def.hand=def.hand.filter(c=>c.id!==card.id);
+        /* the card behind this slot may already be gone (a rigged pick consumed it) —
+           steal another card that is still genuinely in the hand, never a ghost copy */
+        let ix=def.hand.findIndex(h=>h.id===card.id);
+        if(ix<0){
+          card=mapping.find(c=>!stolen.includes(c)&&def.hand.some(h=>h.id===c.id));
+          if(!card) return;
+          ix=def.hand.findIndex(h=>h.id===card.id);
+        }
+        def.hand.splice(ix,1);
         stolen.push(card); left--;
         playSfx("pick");
         flipFanCard(el,card);
@@ -1982,25 +1991,41 @@ function fanPickWatch(att,def,n){
     box.appendChild(row);
     $("modal").classList.add("on");
     const stolen=[]; let k=0; let skipped=false;
+    const taken=new Set();   // fan slots claimed SYNCHRONOUSLY — the visual flip lags behind, so this set (not the "flipped" class) is the source of truth for what can still be picked
     const skipBtn=box.querySelector("#fanSkip");
     if(skipBtn) skipBtn.onclick=()=>{ skipped=true; };
     const close=(delay)=>{ setTimeout(()=>{ $("modal").classList.remove("on"); res(stolen); }, delay); };
+    const availIdx=()=>cards.map((el,i)=>i).filter(i=>!taken.has(i));
+    /* claim the card behind fan slot i — exactly one real copy leaves the hand */
+    const stealAt=(i)=>{
+      let card=mapping[i];
+      if(TUT&&TUT.forceSteal&&TUT.forceSteal.length){
+        const alt=mapping.find(c=>c.name===TUT.forceSteal[0]&&def.hand.some(h=>h.id===c.id));
+        if(alt){ card=alt; TUT.forceSteal.shift(); }
+      }
+      let ix=def.hand.findIndex(h=>h.id===card.id);
+      if(ix<0){
+        card=mapping.find(c=>!stolen.includes(c)&&def.hand.some(h=>h.id===c.id));
+        if(!card) return null;
+        ix=def.hand.findIndex(h=>h.id===card.id);
+      }
+      def.hand.splice(ix,1);
+      stolen.push(card); k++;
+      return card;
+    };
     const finishFast=()=>{
       let d=0;
       while(k<n){
-        const avail=cards.map((el,i)=>({el,i})).filter(x=>!x.el.classList.contains("flipped"));
-        if(!avail.length) break;
-        const pick=avail[Math.floor(Math.random()*avail.length)];   // face-down: blind, uniformly random
-        let card=mapping[pick.i];
-        if(TUT&&TUT.forceSteal&&TUT.forceSteal.length){
-          const alt=mapping.find(c=>c.name===TUT.forceSteal[0]&&def.hand.some(h=>h.id===c.id));
-          if(alt){ card=alt; TUT.forceSteal.shift(); }
-        }
-        def.hand=def.hand.filter(c=>c.id!==card.id);
-        stolen.push(card); k++;
-        setTimeout(()=>{ flipFanCard(pick.el,card);
-          if(card.kind==="devante") pick.el.classList.add("shimmer");
-          setTimeout(()=>{ fxFlyToRival(pick.el,att); pick.el.classList.add("taken"); },260);
+        const av=availIdx();
+        if(!av.length||!def.hand.length) break;
+        const i=av[Math.floor(Math.random()*av.length)];   // face-down: blind, uniformly random
+        taken.add(i);
+        const card=stealAt(i);
+        if(!card) break;
+        const el=cards[i];
+        setTimeout(()=>{ flipFanCard(el,card);
+          if(card.kind==="devante") el.classList.add("shimmer");
+          setTimeout(()=>{ fxFlyToRival(el,att); el.classList.add("taken"); },260);
         }, d);
         d+=140;
       }
@@ -2030,20 +2055,17 @@ function fanPickWatch(att,def,n){
     });
     const pickOne=()=>{
       if(skipped){ finishFast(); return; }
-      const avail=cards.map((el,i)=>({el,i})).filter(x=>!x.el.classList.contains("flipped"));
-      if(!avail.length||k>=n){ close(Math.round(T("reveal")*0.6)); return; }
-      const pick=avail[Math.floor(Math.random()*avail.length)];   // face-down: blind, uniformly random
+      const av=availIdx();
+      if(!av.length||k>=n){ close(Math.round(T("reveal")*0.6)); return; }
+      const i=av[Math.floor(Math.random()*av.length)];   // face-down: blind, uniformly random
+      taken.add(i);   // reserved NOW — Skip can no longer steal this slot a second time
+      const pick={el:cards[i],i};
       pick.el.classList.add("aipick");
       try{ pick.el.scrollIntoView({behavior:"smooth",inline:"center",block:"nearest"}); }catch(e){}
       setTimeout(()=>{
-        if(skipped){ pick.el.classList.remove("aipick"); finishFast(); return; }
-        let card=mapping[pick.i];
-        if(TUT&&TUT.forceSteal&&TUT.forceSteal.length){
-          const alt=mapping.find(c=>c.name===TUT.forceSteal[0]&&def.hand.some(h=>h.id===c.id));
-          if(alt){ card=alt; TUT.forceSteal.shift(); }
-        }
-        def.hand=def.hand.filter(c=>c.id!==card.id);
-        stolen.push(card); k++;
+        if(skipped){ pick.el.classList.remove("aipick"); taken.delete(i); finishFast(); return; }
+        const card=stealAt(i);
+        if(!card){ close(Math.round(T("reveal")*0.5)); return; }
         playSfx("pick");
         flipFanCard(pick.el,card);
         if(card.kind==="devante"){ pick.el.classList.add("shimmer"); playSfx("devante-stolen"); }
